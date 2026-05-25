@@ -1,8 +1,18 @@
-import { Toggle } from './ui/Toggle';
-import { fmtMoney } from '../data/utils';
+import { Toggle } from '../ui/Toggle';
+import { fmtMoney } from '../../data/utils';
+import type { Account } from '../../types';
 
-export const AccountCard = ({ account, onToggle, privacy }) => (
-  <div className={`fa-account ${account.visible ? '' : 'fa-account-off'}`} style={{ '--swatch': account.color }}>
+interface AccountCardProps {
+  account: Account;
+  onToggle: () => void;
+  privacy: boolean;
+}
+
+export const AccountCard = ({ account, onToggle, privacy }: AccountCardProps) => (
+  <div
+    className={`fa-account ${account.visible ? '' : 'fa-account-off'}`}
+    style={{ '--swatch': account.color } as React.CSSProperties}
+  >
     <div className="fa-account-head">
       <div className="fa-account-emoji">{account.emoji}</div>
       <Toggle checked={account.visible} onChange={onToggle} label={`Mostrar ${account.name}`} />

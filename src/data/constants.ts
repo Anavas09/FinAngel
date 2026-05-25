@@ -1,4 +1,6 @@
-export const ACCOUNTS_SEED = [
+import type { AccountSeed, Category, Currency, MascotMood, MascotPersonality, Transaction, Tweaks } from '../types';
+
+export const ACCOUNTS_SEED: AccountSeed[] = [
   { id: 'ars',    name: 'Cuenta ARS',      kind: 'Banco',     currency: 'ARS',  symbol: '$',   color: '#7EC4F2', emoji: '🇦🇷' },
   { id: 'mp',     name: 'Mercado Pago',    kind: 'Billetera', currency: 'ARS',  symbol: '$',   color: '#B8E6C9', emoji: '💳' },
   { id: 'usd',    name: 'Cuenta USD',      kind: 'Banco',     currency: 'USD',  symbol: 'US$', color: '#FFD66B', emoji: '💵' },
@@ -6,7 +8,7 @@ export const ACCOUNTS_SEED = [
   { id: 'crypto', name: 'Cripto wallet',   kind: 'Cripto',    currency: 'USDT', symbol: '',    color: '#D4C5F9', emoji: '🪙' },
 ];
 
-export const CATEGORIES = [
+export const CATEGORIES: Category[] = [
   { id: 'comida',           label: 'Comida',          color: '#F26B5E', icon: '🛒' },
   { id: 'vivienda',         label: 'Vivienda',        color: '#7EC4F2', icon: '🏠' },
   { id: 'servicios',        label: 'Servicios',       color: '#F2C94C', icon: '💡' },
@@ -17,11 +19,12 @@ export const CATEGORIES = [
   { id: 'otros',            label: 'Otros',           color: '#B8B0A0', icon: '✨' },
 ];
 
-export const catById = (id) => CATEGORIES.find(c => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+export const catById = (id: string): Category =>
+  CATEGORIES.find(c => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1];
 
-export const FX_TO_ARS = { ARS: 1, USD: 1180, USDT: 1190 };
+export const FX_TO_ARS: Record<Currency, number> = { ARS: 1, USD: 1180, USDT: 1190 };
 
-export const ACCOUNT_BALANCES = {
+export const ACCOUNT_BALANCES: Record<string, number> = {
   ars: 540320,
   mp: 86450,
   usd: 1820,
@@ -29,7 +32,7 @@ export const ACCOUNT_BALANCES = {
   crypto: 1240,
 };
 
-export const TRANSACTIONS_SEED = [
+export const TRANSACTIONS_SEED: Transaction[] = [
   { id: 't1',  date: '2026-05-20', accountId: 'mp',     categoryId: 'comida',          amount: -8450,   note: 'Súper de la semana' },
   { id: 't2',  date: '2026-05-19', accountId: 'ars',    categoryId: 'vivienda',        amount: -210000, note: 'Alquiler mayo' },
   { id: 't3',  date: '2026-05-18', accountId: 'ars',    categoryId: 'ingreso',         amount: 850000,  note: 'Sueldo' },
@@ -42,7 +45,7 @@ export const TRANSACTIONS_SEED = [
   { id: 't10', date: '2026-05-08', accountId: 'mp',     categoryId: 'comida',          amount: -3200,   note: 'Café ☕' },
 ];
 
-export const MASCOT_COPY = {
+export const MASCOT_COPY: Record<MascotPersonality, Record<MascotMood, string[]>> = {
   motivadora: {
     great: ['¡Vas genial este mes!', 'Tus ahorros están en racha 🚀', 'Que sigan los buenos hábitos'],
     ok:    ['Vas bien, sin sustos', 'El mes pinta estable', 'Equilibrio: el arte secreto'],
@@ -60,7 +63,7 @@ export const MASCOT_COPY = {
   },
 };
 
-export const DEFAULT_TWEAKS = {
+export const DEFAULT_TWEAKS: Tweaks = {
   privacy: false,
   mascotPersonality: 'motivadora',
   layout: 'saludo',

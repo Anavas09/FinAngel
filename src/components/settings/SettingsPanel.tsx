@@ -1,8 +1,25 @@
 import { useState } from 'react';
+import type { Tweaks } from '../../types';
+
+interface SettingsPanelProps {
+  tweaks: Tweaks;
+  setTweak: <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => void;
+  onReset: () => void;
+}
+
+interface RowProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+interface ToggleBtnProps {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}
 
 const ACCENT_COLORS = ['#FF5C4D', '#5BB890', '#7EC4F2', '#D4C5F9', '#F2C94C'];
 
-export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
+export const SettingsPanel = ({ tweaks, setTweak, onReset }: SettingsPanelProps) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -22,8 +39,8 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
           fontSize: 22, cursor: 'pointer', zIndex: 50,
           transition: 'transform 120ms',
         }}
-        onMouseEnter={e => e.currentTarget.style.transform = 'translate(-2px,-2px)'}
-        onMouseLeave={e => e.currentTarget.style.transform = 'translate(0,0)'}
+        onMouseEnter={e => (e.currentTarget.style.transform = 'translate(-2px,-2px)')}
+        onMouseLeave={e => (e.currentTarget.style.transform = 'translate(0,0)')}
       >
         ⚙️
       </button>
@@ -48,20 +65,17 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
               ⚙️ Configuración
             </div>
 
-            {/* Privacy */}
             <Row label="Privacidad">
               <ToggleBtn
                 checked={tweaks.privacy}
                 onChange={v => setTweak('privacy', v)}
-                label="Ocultar montos"
               />
             </Row>
 
-            {/* Personality */}
             <Row label="Personalidad">
               <select
                 value={tweaks.mascotPersonality}
-                onChange={e => setTweak('mascotPersonality', e.target.value)}
+                onChange={e => setTweak('mascotPersonality', e.target.value as Tweaks['mascotPersonality'])}
                 style={selectStyle}
               >
                 <option value="motivadora">Motivadora 🚀</option>
@@ -70,11 +84,10 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
               </select>
             </Row>
 
-            {/* Layout */}
             <Row label="Layout">
               <select
                 value={tweaks.layout}
-                onChange={e => setTweak('layout', e.target.value)}
+                onChange={e => setTweak('layout', e.target.value as Tweaks['layout'])}
                 style={selectStyle}
               >
                 <option value="saludo">Saludo</option>
@@ -83,7 +96,6 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
               </select>
             </Row>
 
-            {/* Accent color */}
             <Row label="Color principal">
               <div style={{ display: 'flex', gap: 8 }}>
                 {ACCENT_COLORS.map(c => (
@@ -106,7 +118,6 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
               </div>
             </Row>
 
-            {/* Reset */}
             <button
               onClick={() => { onReset(); setOpen(false); }}
               style={{
@@ -130,14 +141,14 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }) => {
   );
 };
 
-const Row = ({ label, children }) => (
+const Row = ({ label, children }: RowProps) => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink, #1D1A18)' }}>{label}</span>
     {children}
   </div>
 );
 
-const ToggleBtn = ({ checked, onChange }) => (
+const ToggleBtn = ({ checked, onChange }: ToggleBtnProps) => (
   <button
     role="switch"
     aria-checked={checked}
@@ -149,7 +160,7 @@ const ToggleBtn = ({ checked, onChange }) => (
   </button>
 );
 
-const selectStyle = {
+const selectStyle: React.CSSProperties = {
   padding: '6px 10px',
   border: '2px solid var(--line, #1D1A18)',
   borderRadius: 10,

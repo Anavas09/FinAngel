@@ -1,5 +1,14 @@
-import { EyeToggle } from './ui/EyeToggle';
-import { fmtMoney } from '../data/utils';
+import { EyeToggle } from '../ui/EyeToggle';
+import { fmtMoney } from '../../data/utils';
+import type { Currency } from '../../types';
+
+interface TotalCardProps {
+  totalARS: number;
+  totals: Record<Currency, number>;
+  privacy: boolean;
+  setPrivacy: (v: boolean) => void;
+  monthNet: number;
+}
 
 const DecorBlobs = () => (
   <svg className="fa-total-blobs" viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
@@ -9,7 +18,7 @@ const DecorBlobs = () => (
   </svg>
 );
 
-export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet }) => {
+export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet }: TotalCardProps) => {
   const positive = monthNet >= 0;
   return (
     <section className="fa-total">
@@ -25,7 +34,7 @@ export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet }) =
         </div>
       </div>
       <div className="fa-total-breakdown">
-        {Object.entries(totals)
+        {(Object.entries(totals) as [Currency, number][])
           .filter(([, v]) => v !== 0)
           .map(([ccy, v]) => (
             <div key={ccy} className="fa-total-ccy">

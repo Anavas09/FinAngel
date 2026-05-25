@@ -1,7 +1,15 @@
-import { FinAngel } from './Mascot';
-import { catById, fmtMoney, fmtDate } from '../data/utils';
+import { FinAngel } from '../mascot/Mascot';
+import { catById, fmtMoney, fmtDate } from '../../data/utils';
+import type { Account, Transaction } from '../../types';
 
-export const TransactionList = ({ transactions, accounts, privacy, onEdit }) => {
+interface TransactionListProps {
+  transactions: Transaction[];
+  accounts: Account[];
+  privacy: boolean;
+  onEdit: (tx: Transaction) => void;
+}
+
+export const TransactionList = ({ transactions, accounts, privacy, onEdit }: TransactionListProps) => {
   if (transactions.length === 0) {
     return (
       <div className="fa-empty">
@@ -11,7 +19,7 @@ export const TransactionList = ({ transactions, accounts, privacy, onEdit }) => 
     );
   }
 
-  const groups = transactions.reduce((acc, t) => {
+  const groups = transactions.reduce<Record<string, Transaction[]>>((acc, t) => {
     (acc[t.date] = acc[t.date] || []).push(t);
     return acc;
   }, {});
@@ -36,7 +44,7 @@ export const TransactionList = ({ transactions, accounts, privacy, onEdit }) => 
                     <span className="fa-tx-meta">{cat.label} · {acc?.name}</span>
                   </div>
                   <div className="fa-tx-amount" data-positive={positive}>
-                    {positive ? '+' : ''}{fmtMoney(t.amount, acc?.currency || 'ARS', privacy)}
+                    {positive ? '+' : ''}{fmtMoney(t.amount, acc?.currency ?? 'ARS', privacy)}
                   </div>
                 </div>
               );

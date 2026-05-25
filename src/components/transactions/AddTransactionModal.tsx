@@ -1,15 +1,26 @@
 import { useState } from 'react';
-import { CATEGORIES } from '../data/constants';
+import { CATEGORIES } from '../../data/constants';
+import type { Account, TransactionInput } from '../../types';
 
-export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete }) => {
-  const [kind, setKind] = useState(editing ? (editing.amount >= 0 ? 'income' : 'expense') : 'expense');
+interface AddTransactionModalProps {
+  accounts: Account[];
+  editing: TransactionInput | null;
+  onClose: () => void;
+  onSave: (tx: TransactionInput) => void;
+  onDelete: (() => void) | null;
+}
+
+export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete }: AddTransactionModalProps) => {
+  const [kind, setKind] = useState<'income' | 'expense'>(
+    editing ? (editing.amount >= 0 ? 'income' : 'expense') : 'expense'
+  );
   const [amount, setAmount] = useState(editing ? String(Math.abs(editing.amount)) : '');
-  const [accountId, setAccountId] = useState(editing?.accountId || accounts[0].id);
-  const [categoryId, setCategoryId] = useState(editing?.categoryId || 'comida');
-  const [note, setNote] = useState(editing?.note || '');
-  const [date, setDate] = useState(editing?.date || new Date().toISOString().slice(0, 10));
+  const [accountId, setAccountId] = useState(editing?.accountId ?? accounts[0].id);
+  const [categoryId, setCategoryId] = useState(editing?.categoryId ?? 'comida');
+  const [note, setNote] = useState(editing?.note ?? '');
+  const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
 
-  const submit = (e) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
     if (!num || isNaN(num)) return;
@@ -53,7 +64,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
           <label className="fa-field fa-field-amount">
             <span className="fa-field-label">Monto</span>
             <div className="fa-amount-input">
-              <span className="fa-amount-currency">{selectedAccount?.symbol || '$'}</span>
+              <span className="fa-amount-currency">{selectedAccount?.symbol ?? '$'}</span>
               <input
                 type="text"
                 inputMode="decimal"
@@ -75,7 +86,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                   type="button"
                   className={`fa-account-chip ${accountId === a.id ? 'active' : ''}`}
                   onClick={() => setAccountId(a.id)}
-                  style={{ '--swatch': a.color }}
+                  style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
                 </button>
@@ -93,7 +104,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                     type="button"
                     className={`fa-cat-chip ${categoryId === c.id ? 'active' : ''}`}
                     onClick={() => setCategoryId(c.id)}
-                    style={{ '--swatch': c.color }}
+                    style={{ '--swatch': c.color } as React.CSSProperties}
                   >
                     <span className="fa-cat-chip-icon">{c.icon}</span>
                     <span>{c.label}</span>

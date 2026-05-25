@@ -1,22 +1,37 @@
-import { FinAngel, FinAngelMini } from './Mascot';
-import { catById, fmtMoney, fmtDate } from '../data/utils';
-import { FX_TO_ARS } from '../data/constants';
+import { FinAngel, FinAngelMini } from '../mascot/Mascot';
+import { catById, fmtMoney, fmtDate } from '../../data/utils';
+import { FX_TO_ARS } from '../../data/constants';
+import type { Account, Transaction } from '../../types';
 
-export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast }) => {
+interface ExportModalProps {
+  accounts: Account[];
+  transactions: Transaction[];
+  totalARS: number;
+  onClose: () => void;
+  onToast: (msg: string) => void;
+}
+
+export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast }: ExportModalProps) => {
   const totalIn = transactions
     .filter(t => t.amount > 0)
-    .reduce((s, t) => s + t.amount * (FX_TO_ARS[accounts.find(a => a.id === t.accountId)?.currency] || 0), 0);
+    .reduce((s, t) => {
+      const a = accounts.find(x => x.id === t.accountId);
+      return s + t.amount * (a ? FX_TO_ARS[a.currency] : 0);
+    }, 0);
 
   const totalOut = transactions
     .filter(t => t.amount < 0)
-    .reduce((s, t) => s + Math.abs(t.amount) * (FX_TO_ARS[accounts.find(a => a.id === t.accountId)?.currency] || 0), 0);
+    .reduce((s, t) => {
+      const a = accounts.find(x => x.id === t.accountId);
+      return s + Math.abs(t.amount) * (a ? FX_TO_ARS[a.currency] : 0);
+    }, 0);
 
   const downloadCSV = () => {
-    const rows = [
+    const rows: (string | number)[][] = [
       ['Fecha', 'Cuenta', 'Moneda', 'Categoría', 'Nota', 'Monto'],
       ...transactions.map(t => {
         const a = accounts.find(x => x.id === t.accountId);
-        return [t.date, a?.name || '', a?.currency || '', catById(t.categoryId).label, t.note, t.amount];
+        return [t.date, a?.name ?? '', a?.currency ?? '', catById(t.categoryId).label, t.note, t.amount];
       }),
     ];
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -104,7 +119,7 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
                     </td>
                     <td>{t.note}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: t.amount >= 0 ? '#3F8F69' : '#C44A3D' }}>
-                      {t.amount >= 0 ? '+' : ''}{fmtMoney(t.amount, a?.currency || 'ARS')}
+                      {t.amount >= 0 ? '+' : ''}{fmtMoney(t.amount, a?.currency ?? 'ARS')}
                     </td>
                   </tr>
                 );

@@ -1,8 +1,15 @@
 import { useState } from 'react';
-import { FinAngelMini } from './Mascot';
-import { THEMES } from '../hooks/useTheme';
+import { FinAngelMini } from '../mascot/Mascot';
+import { THEMES } from '../../hooks/useTheme';
+import type { ThemeKey } from '../../types';
 
-export const TopBar = ({ onExport, theme, setTheme }) => {
+interface TopBarProps {
+  onExport: () => void;
+  theme: ThemeKey;
+  setTheme: (t: ThemeKey) => void;
+}
+
+export const TopBar = ({ onExport, theme, setTheme }: TopBarProps) => {
   const [themeOpen, setThemeOpen] = useState(false);
 
   return (
@@ -23,8 +30,8 @@ export const TopBar = ({ onExport, theme, setTheme }) => {
             title="Cambiar tema"
             aria-label="Cambiar tema"
           >
-            <span>{THEMES[theme]?.emoji}</span>
-            <span>{THEMES[theme]?.label}</span>
+            <span>{THEMES[theme].emoji}</span>
+            <span>{THEMES[theme].label}</span>
           </button>
 
           {themeOpen && (
@@ -41,7 +48,7 @@ export const TopBar = ({ onExport, theme, setTheme }) => {
                 boxShadow: 'var(--shadow-stk, 4px 4px 0 #1D1A18)',
                 minWidth: 160,
               }}>
-                {Object.entries(THEMES).map(([key, { label, emoji }]) => (
+                {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, { label, emoji }]) => (
                   <button
                     key={key}
                     onClick={() => { setTheme(key); setThemeOpen(false); }}

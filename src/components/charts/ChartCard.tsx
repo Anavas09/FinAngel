@@ -1,7 +1,20 @@
 import { Donut } from './Donut';
-import { fmtMoney } from '../data/utils';
+import { fmtMoney } from '../../data/utils';
+import type { ChartDataItem } from '../../types';
 
-export const ChartCard = ({ title, sub, data, centerLabel, centerValue, hoverIdx, onHover, mode, privacy }) => {
+interface ChartCardProps {
+  title: string;
+  sub: string;
+  data: ChartDataItem[];
+  centerLabel: string;
+  centerValue: string;
+  hoverIdx: number | null;
+  onHover: (idx: number | null) => void;
+  mode?: string;
+  privacy: boolean;
+}
+
+export const ChartCard = ({ title, sub, data, centerLabel, centerValue, hoverIdx, onHover, mode, privacy }: ChartCardProps) => {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   return (
     <article className="fa-chart-card">
@@ -28,8 +41,8 @@ export const ChartCard = ({ title, sub, data, centerLabel, centerValue, hoverIdx
                 key={d.id || d.label}
                 className="fa-legend-item"
                 data-hover={hoverIdx === i}
-                onMouseEnter={() => onHover && onHover(i)}
-                onMouseLeave={() => onHover && onHover(null)}
+                onMouseEnter={() => onHover(i)}
+                onMouseLeave={() => onHover(null)}
               >
                 <span className="fa-legend-dot" style={{ background: d.color }} />
                 <span className="fa-legend-label">

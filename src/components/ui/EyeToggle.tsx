@@ -1,4 +1,10 @@
-export const EyeToggle = ({ privacy, setPrivacy, variant = 'light' }) => (
+interface EyeToggleProps {
+  privacy: boolean;
+  setPrivacy: (value: boolean) => void;
+  variant?: 'light' | 'dark';
+}
+
+export const EyeToggle = ({ privacy, setPrivacy, variant = 'light' }: EyeToggleProps) => (
   <button
     className={`fa-eye-toggle fa-eye-toggle-${variant}`}
     onClick={() => setPrivacy(!privacy)}

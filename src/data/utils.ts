@@ -1,8 +1,9 @@
 import { catById } from './constants';
+import type { Currency } from '../types';
 
 export { catById };
 
-export const fmtMoney = (n, ccy = 'ARS', hide = false) => {
+export const fmtMoney = (n: number, ccy: Currency | string = 'ARS', hide = false): string => {
   if (hide) return '••••••';
   const sign = n < 0 ? '-' : '';
   const abs = Math.abs(n);
@@ -18,18 +19,18 @@ export const fmtMoney = (n, ccy = 'ARS', hide = false) => {
   return `${sign}${abs}`;
 };
 
-export const fmtDate = (iso) => {
+export const fmtDate = (iso: string): string => {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });
 };
 
-export const loadState = (key) => {
+export const loadState = <T>(key: string): T | null => {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
+    return raw ? (JSON.parse(raw) as T) : null;
   } catch { return null; }
 };
 
-export const saveState = (key, value) => {
+export const saveState = (key: string, value: unknown): void => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 };

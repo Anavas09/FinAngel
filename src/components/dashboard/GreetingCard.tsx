@@ -1,6 +1,13 @@
-import { FinAngel } from './Mascot';
+import { FinAngel } from '../mascot/Mascot';
+import type { Layout, MascotState } from '../../types';
 
-const greetingTime = () => {
+interface GreetingCardProps {
+  mood: MascotState;
+  line: string;
+  layout: Layout;
+}
+
+const greetingTime = (): string => {
   const h = new Date().getHours();
   if (h < 6)  return 'Trasnochando';
   if (h < 12) return 'Buen día';
@@ -8,7 +15,7 @@ const greetingTime = () => {
   return 'Buenas noches';
 };
 
-const layoutLabel = (l) =>
+const layoutLabel = (l: Layout): string =>
   l === 'compact' ? 'Vista compacta' : l === 'stacked' ? 'Vista apilada' : 'Vista normal';
 
 const SparklesDecor = () => (
@@ -28,10 +35,13 @@ const SparklesDecor = () => (
   </svg>
 );
 
-export const GreetingCard = ({ mood, line, layout }) => {
-  const moodColor = { happy: '#FFE9D6', celebrating: '#FFF1B8', worried: '#FFD9C7' }[mood] || '#FFE9D6';
+export const GreetingCard = ({ mood, line, layout }: GreetingCardProps) => {
+  const moodColors: Partial<Record<MascotState, string>> = {
+    happy: '#FFE9D6', celebrating: '#FFF1B8', worried: '#FFD9C7',
+  };
+  const moodColor = moodColors[mood] ?? '#FFE9D6';
   return (
-    <section className="fa-greeting" style={{ '--mood-bg': moodColor }}>
+    <section className="fa-greeting" style={{ '--mood-bg': moodColor } as React.CSSProperties}>
       <div className="fa-greeting-text">
         <span className="fa-greeting-eyebrow">{greetingTime()}, Cami 👋</span>
         <h1 className="fa-greeting-title">{line}</h1>

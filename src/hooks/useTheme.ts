@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import type { ThemeConfig, ThemeKey } from '../types';
 
-export const THEMES = {
+export const THEMES: Record<ThemeKey, ThemeConfig> = {
   sticker: { file: '/themes/sticker.css', label: 'Sticker Pack', emoji: '🎨' },
   warm:    { file: '/themes/warm.css',    label: 'Cálido',       emoji: '☀️' },
   night:   { file: '/themes/night.css',   label: 'Noche',        emoji: '🌙' },
@@ -9,8 +10,8 @@ export const THEMES = {
 const THEME_KEY = 'finangel:theme';
 
 export const useTheme = () => {
-  const [theme, setThemeState] = useState(
-    () => localStorage.getItem(THEME_KEY) || 'sticker'
+  const [theme, setThemeState] = useState<ThemeKey>(
+    () => (localStorage.getItem(THEME_KEY) as ThemeKey) || 'sticker'
   );
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export const useTheme = () => {
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = THEMES[theme]?.file || THEMES.sticker.file;
+    link.href = THEMES[theme].file;
     link.setAttribute('data-fa-theme', theme);
     document.head.appendChild(link);
 

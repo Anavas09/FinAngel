@@ -1,4 +1,13 @@
-export const FinAngel = ({ mood = 'happy', size = 120, style = {}, className = '' }) => {
+import type { MascotState } from '../../types';
+
+interface FinAngelProps {
+  mood?: MascotState;
+  size?: number;
+  style?: React.CSSProperties;
+  className?: string;
+}
+
+export const FinAngel = ({ mood = 'happy', size = 120, style = {}, className = '' }: FinAngelProps) => {
   const body = '#FFE9D6';
   const bodyShade = '#F7C9A3';
   const blush = '#F49B8A';
@@ -7,7 +16,7 @@ export const FinAngel = ({ mood = 'happy', size = 120, style = {}, className = '
   const wing = '#FFFFFF';
   const wingShade = '#F6EFE3';
 
-  const eyes = {
+  const eyes: Record<MascotState, React.ReactElement> = {
     happy: (
       <g fill={dark}>
         <ellipse cx="78" cy="100" rx="5.5" ry="7" />
@@ -56,7 +65,7 @@ export const FinAngel = ({ mood = 'happy', size = 120, style = {}, className = '
     ),
   };
 
-  const mouths = {
+  const mouths: Record<MascotState, React.ReactElement> = {
     happy:       <path d="M88 118 Q100 128 112 118" fill="none" stroke={dark} strokeWidth="3.5" strokeLinecap="round" />,
     chill:       <path d="M90 120 Q100 124 110 120" fill="none" stroke={dark} strokeWidth="3.5" strokeLinecap="round" />,
     worried:     <path d="M88 124 Q100 116 112 124" fill="none" stroke={dark} strokeWidth="3.5" strokeLinecap="round" />,
@@ -65,7 +74,7 @@ export const FinAngel = ({ mood = 'happy', size = 120, style = {}, className = '
     love:        <path d="M88 118 Q100 130 112 118" fill="none" stroke={dark} strokeWidth="3.5" strokeLinecap="round" />,
   };
 
-  const accessory = mood === 'sleepy' ? (
+  const accessory: React.ReactElement | null = mood === 'sleepy' ? (
     <g fill={dark} fontFamily="Bricolage Grotesque, sans-serif" fontWeight="700">
       <text x="148" y="58" fontSize="14">z</text>
       <text x="158" y="46" fontSize="18">Z</text>
@@ -95,13 +104,18 @@ export const FinAngel = ({ mood = 'happy', size = 120, style = {}, className = '
       <ellipse cx="100" cy="160" rx="48" ry="14" fill={bodyShade} opacity="0.35" />
       <ellipse cx="72" cy="125" rx="9" ry="5" fill={blush} opacity="0.55" />
       <ellipse cx="128" cy="125" rx="9" ry="5" fill={blush} opacity="0.55" />
-      {eyes[mood] || eyes.happy}
-      {mouths[mood] || mouths.happy}
+      {eyes[mood]}
+      {mouths[mood]}
       {accessory}
     </svg>
   );
 };
 
-export const FinAngelMini = ({ size = 28, mood = 'happy' }) => (
+interface FinAngelMiniProps {
+  size?: number;
+  mood?: MascotState;
+}
+
+export const FinAngelMini = ({ size = 28, mood = 'happy' }: FinAngelMiniProps) => (
   <FinAngel mood={mood} size={size} style={{ display: 'inline-block', verticalAlign: 'middle' }} />
 );

@@ -1,4 +1,10 @@
-export const Toggle = ({ checked, onChange, label }) => (
+interface ToggleProps {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+}
+
+export const Toggle = ({ checked, onChange, label }: ToggleProps) => (
   <button
     role="switch"
     aria-checked={checked}

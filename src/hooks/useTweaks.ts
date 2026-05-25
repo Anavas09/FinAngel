@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { DEFAULT_TWEAKS, LS_TWEAKS_KEY } from '../data/constants';
 import { loadState, saveState } from '../data/utils';
+import type { Tweaks } from '../types';
 
-export const useTweaks = () => {
-  const [tweaks, setTweaksState] = useState(() => ({
+export const useTweaks = (): [Tweaks, <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => void] => {
+  const [tweaks, setTweaksState] = useState<Tweaks>(() => ({
     ...DEFAULT_TWEAKS,
-    ...(loadState(LS_TWEAKS_KEY) || {}),
+    ...(loadState<Partial<Tweaks>>(LS_TWEAKS_KEY) ?? {}),
   }));
 
-  const setTweak = (key, value) => {
+  const setTweak = <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => {
     setTweaksState(prev => {
       const next = { ...prev, [key]: value };
       saveState(LS_TWEAKS_KEY, next);

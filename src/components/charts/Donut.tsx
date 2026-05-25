@@ -1,9 +1,21 @@
-const polarToCartesian = (cx, cy, r, angle) => {
+import type { ChartDataItem } from '../../types';
+
+interface DonutProps {
+  data: ChartDataItem[];
+  size?: number;
+  thickness?: number;
+  centerLabel?: string;
+  centerValue?: string;
+  hoverIdx: number | null;
+  onHover: (idx: number | null) => void;
+}
+
+const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
   const rad = (angle - 90) * (Math.PI / 180);
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 };
 
-const arcPath = (cx, cy, rOuter, rInner, start, end) => {
+const arcPath = (cx: number, cy: number, rOuter: number, rInner: number, start: number, end: number): string => {
   const largeArc = end - start > 180 ? 1 : 0;
   const so = polarToCartesian(cx, cy, rOuter, end);
   const eo = polarToCartesian(cx, cy, rOuter, start);
@@ -18,7 +30,7 @@ const arcPath = (cx, cy, rOuter, rInner, start, end) => {
   ].join(' ');
 };
 
-export const Donut = ({ data, size = 220, thickness = 32, centerLabel, centerValue, hoverIdx, onHover }) => {
+export const Donut = ({ data, size = 220, thickness = 32, centerLabel, centerValue, hoverIdx, onHover }: DonutProps) => {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   const cx = size / 2;
   const cy = size / 2;
@@ -58,10 +70,10 @@ export const Donut = ({ data, size = 220, thickness = 32, centerLabel, centerVal
                 transition: 'opacity 200ms, transform 200ms',
                 transformOrigin: `${cx}px ${cy}px`,
                 transform: hoverIdx === i ? 'scale(1.03)' : 'scale(1)',
-                cursor: onHover ? 'pointer' : 'default',
+                cursor: 'pointer',
               }}
-              onMouseEnter={() => onHover && onHover(i)}
-              onMouseLeave={() => onHover && onHover(null)}
+              onMouseEnter={() => onHover(i)}
+              onMouseLeave={() => onHover(null)}
             />
           );
         })}
