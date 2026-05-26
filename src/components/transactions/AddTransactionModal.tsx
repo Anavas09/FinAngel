@@ -24,14 +24,16 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
     if (!num || isNaN(num)) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
+    const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
     onSave({
       id: editing?.id,
       date,
       accountId,
       categoryId: kind === 'income' ? 'ingreso' : categoryId,
       amount: signed,
-      note: note || (kind === 'income' ? 'Ingreso' : 'Gasto'),
+      note: cleanNote,
     });
   };
 
@@ -69,7 +71,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={e => setAmount(e.target.value)}
+                onChange={e => { if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
                 placeholder="0"
                 autoFocus
               />
@@ -127,6 +129,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 placeholder="ej. Café con Lu"
+                maxLength={200}
               />
             </label>
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { TopBar } from './components/layout/TopBar';
 import { GreetingCard } from './components/dashboard/GreetingCard';
 import { TotalCard } from './components/dashboard/TotalCard';
@@ -6,153 +7,66 @@ import { AccountCard } from './components/dashboard/AccountCard';
 import { ChartCard } from './components/charts/ChartCard';
 import { TransactionList } from './components/transactions/TransactionList';
 import { AddTransactionModal } from './components/transactions/AddTransactionModal';
+import { AddAccountModal } from './components/accounts/AddAccountModal';
 import { ExportModal } from './components/transactions/ExportModal';
 import { SettingsPanel } from './components/settings/SettingsPanel';
+import { AuthScreen } from './components/auth/AuthScreen';
 import { FinAngelMini } from './components/mascot/Mascot';
 import { useTheme } from './hooks/useTheme';
 import { useTweaks } from './hooks/useTweaks';
-import {
-  ACCOUNTS_SEED, ACCOUNT_BALANCES, TRANSACTIONS_SEED,
-  MASCOT_COPY, FX_TO_ARS, LS_KEY,
-} from './data/constants';
-import { fmtMoney, loadState, saveState } from './data/utils';
-import type {
-  Account, ChartDataItem, Currency, MascotMood, MascotState,
-  Transaction, TransactionInput,
-} from './types';
-
-interface PersistedState {
-  accounts: Account[];
-  transactions: Transaction[];
-}
+import { useFinanceData } from './hooks/useFinanceData';
+import { supabase } from './lib/supabase';
+import { MASCOT_COPY } from './data/constants';
+import { fmtMoney } from './data/utils';
+import type { MascotMood, MascotState, TransactionInput } from './types';
 
 const App = () => {
   const { theme, setTheme } = useTheme();
-
-  const persisted = loadState<PersistedState>(LS_KEY);
-  const [accounts, setAccounts] = useState<Account[]>(
-    persisted?.accounts ?? ACCOUNTS_SEED.map(a => ({ ...a, visible: true, balance: ACCOUNT_BALANCES[a.id] }))
-  );
-  const [transactions, setTransactions] = useState<Transaction[]>(persisted?.transactions ?? TRANSACTIONS_SEED);
-  const [addOpen, setAddOpen] = useState(false);
-  const [editingTx, setEditingTx] = useState<TransactionInput | null>(null);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [hoverCatIdx, setHoverCatIdx] = useState<number | null>(null);
-  const [hoverFlowIdx, setHoverFlowIdx] = useState<number | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
   const [tweaks, setTweak] = useTweaks();
   const { privacy, mascotPersonality: personality, layout, primaryAccent: accent } = tweaks;
 
-  useEffect(() => { saveState(LS_KEY, { accounts, transactions }); }, [accounts, transactions]);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent', accent);
-  }, [accent]);
-
-  const toggleAccount = (id: string) =>
-    setAccounts(accounts.map(a => a.id === id ? { ...a, visible: !a.visible } : a));
-
-  const visibleAccounts = accounts.filter(a => a.visible);
-
-  const totalsByCcy = useMemo<Record<Currency, number>>(() => {
-    const out: Record<Currency, number> = { ARS: 0, USD: 0, USDT: 0 };
-    visibleAccounts.forEach(a => { out[a.currency] = (out[a.currency] ?? 0) + a.balance; });
-    return out;
-  }, [visibleAccounts]);
-
-  const totalInARS = useMemo(
-    () => visibleAccounts.reduce((s, a) => s + a.balance * (FX_TO_ARS[a.currency] ?? 0), 0),
-    [visibleAccounts]
-  );
-
-  const thisMonth = useMemo(() => {
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    return transactions.filter(
-      t => t.date.startsWith(ym) && accounts.find(a => a.id === t.accountId)?.visible
-    );
-  }, [transactions, accounts]);
-
-  const categoryData = useMemo<ChartDataItem[]>(() => {
-    const byCat: Record<string, number> = {};
-    thisMonth.forEach(t => {
-      if (t.amount >= 0) return;
-      const a = accounts.find(x => x.id === t.accountId);
-      const ars = Math.abs(t.amount) * (a ? FX_TO_ARS[a.currency] : 0);
-      byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + ars;
-    });
-    const catMap: Record<string, { label: string; color: string; icon: string }> = {
-      comida:          { label: 'Comida',          color: '#F26B5E', icon: '🛒' },
-      vivienda:        { label: 'Vivienda',         color: '#7EC4F2', icon: '🏠' },
-      servicios:       { label: 'Servicios',        color: '#F2C94C', icon: '💡' },
-      salud:           { label: 'Salud',            color: '#5BB890', icon: '🩺' },
-      entretenimiento: { label: 'Entretenimiento',  color: '#D4C5F9', icon: '🎬' },
-      ahorro:          { label: 'Ahorro',           color: '#F49B8A', icon: '🐷' },
-      ingreso:         { label: 'Ingreso',          color: '#5BB890', icon: '💰' },
-      otros:           { label: 'Otros',            color: '#B8B0A0', icon: '✨' },
-    };
-    return Object.entries(byCat)
-      .map(([id, value]) => {
-        const cat = catMap[id] ?? { label: id, color: '#B8B0A0', icon: '✨' };
-        return { id, value, ...cat };
-      })
-      .sort((a, b) => b.value - a.value);
-  }, [thisMonth, accounts]);
-
-  const flowData = useMemo<ChartDataItem[]>(() => {
-    let inc = 0, exp = 0;
-    thisMonth.forEach(t => {
-      const a = accounts.find(x => x.id === t.accountId);
-      const ars = t.amount * (a ? FX_TO_ARS[a.currency] : 0);
-      if (ars >= 0) inc += ars; else exp += Math.abs(ars);
-    });
-    return [
-      { id: 'inc', label: 'Ingresos', value: inc, color: '#5BB890', icon: '⬆' },
-      { id: 'exp', label: 'Egresos',  value: exp, color: '#F26B5E', icon: '⬇' },
-    ];
-  }, [thisMonth, accounts]);
-
-  const monthNet = flowData[0].value - flowData[1].value;
-  const mood: MascotMood = monthNet > flowData[0].value * 0.2 ? 'great' : monthNet > 0 ? 'ok' : 'warn';
-  const moodMap: Record<MascotMood, MascotState> = { great: 'celebrating', ok: 'happy', warn: 'worried' };
-  const mascotMood: MascotState = moodMap[mood];
-  const mascotLine = useMemo(() => {
-    const lines = MASCOT_COPY[personality]?.[mood] ?? MASCOT_COPY.motivadora[mood];
-    return lines[Math.floor(Math.random() * lines.length)];
-  }, [personality, mood]);
-
-  const upsertTx = (tx: TransactionInput) => {
-    if (tx.id && transactions.find(t => t.id === tx.id)) {
-      setTransactions(transactions.map(t => t.id === tx.id ? (tx as Transaction) : t));
-      showToast('Movimiento actualizado');
-    } else {
-      const newTx: Transaction = { ...tx, id: 't' + Date.now() };
-      setTransactions([newTx, ...transactions]);
-      setAccounts(accounts.map(a => a.id === newTx.accountId ? { ...a, balance: a.balance + newTx.amount } : a));
-      showToast('Movimiento agregado');
-    }
-  };
-
-  const deleteTx = (id: string) => {
-    const tx = transactions.find(t => t.id === id);
-    if (!tx) return;
-    setTransactions(transactions.filter(t => t.id !== id));
-    setAccounts(accounts.map(a => a.id === tx.accountId ? { ...a, balance: a.balance - tx.amount } : a));
-    showToast('Movimiento eliminado');
-  };
+  // UI state
+  const [addOpen, setAddOpen]               = useState(false);
+  const [addAccountOpen, setAddAccountOpen] = useState(false);
+  const [editingTx, setEditingTx]           = useState<TransactionInput | null>(null);
+  const [exportOpen, setExportOpen]         = useState(false);
+  const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
+  const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
+  const [toast, setToast]                   = useState<string | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 2200);
   };
 
-  const handleReset = () => {
-    localStorage.removeItem(LS_KEY);
-    setAccounts(ACCOUNTS_SEED.map(a => ({ ...a, visible: true, balance: ACCOUNT_BALANCES[a.id] })));
-    setTransactions(TRANSACTIONS_SEED);
-    showToast('Datos reseteados');
-  };
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent', accent);
+  }, [accent]);
+
+  const finance = useFinanceData(session ?? null, showToast);
+
+  // Mascot
+  const mood: MascotMood = finance.monthNet > finance.flowData[0].value * 0.2 ? 'great' : finance.monthNet > 0 ? 'ok' : 'warn';
+  const mascotMood: MascotState = ({ great: 'celebrating', ok: 'happy', warn: 'worried' } as const)[mood];
+  const mascotLine = useMemo(() => {
+    const lines = MASCOT_COPY[personality]?.[mood] ?? MASCOT_COPY.motivadora[mood];
+    return lines[Math.floor(Math.random() * lines.length)];
+  }, [personality, mood]);
+
+  // --- Render guards ---
+  if (session === undefined) return <Spinner />;
+  if (!session) return <AuthScreen />;
+  if (finance.loading) return <Spinner />;
+
+  const { accounts, transactions, visibleAccounts, totalsByCcy, totalInARS, categoryData, flowData, monthNet } = finance;
 
   return (
     <div className={`fa-app fa-layout-${layout}`}>
@@ -172,18 +86,27 @@ const App = () => {
         <section className="fa-section">
           <header className="fa-section-head">
             <h2>Tus cuentas</h2>
-            <span className="fa-section-sub">{visibleAccounts.length} de {accounts.length} visibles</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {accounts.length > 0 && (
+                <span className="fa-section-sub">{visibleAccounts.length} de {accounts.length} visibles</span>
+              )}
+              <button className="fa-link" onClick={() => setAddAccountOpen(true)}>+ Agregar</button>
+            </div>
           </header>
-          <div className="fa-accounts">
-            {accounts.map(a => (
-              <AccountCard
-                key={a.id}
-                account={a}
-                onToggle={() => toggleAccount(a.id)}
-                privacy={privacy}
-              />
-            ))}
-          </div>
+          {accounts.length === 0 ? (
+            <div className="fa-empty">
+              <p>No hay cuentas todavía.</p>
+              <button className="fa-btn fa-btn-primary" onClick={finance.handleLoadSeed}>
+                Cargar datos de ejemplo
+              </button>
+            </div>
+          ) : (
+            <div className="fa-accounts">
+              {accounts.map(a => (
+                <AccountCard key={a.id} account={a} onToggle={() => finance.toggleAccount(a.id)} privacy={privacy} />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="fa-section fa-charts">
@@ -237,13 +160,20 @@ const App = () => {
         <span className="fa-fab-label">Agregar</span>
       </button>
 
+      {addAccountOpen && (
+        <AddAccountModal
+          onClose={() => setAddAccountOpen(false)}
+          onSave={fields => { finance.addAccount(fields); setAddAccountOpen(false); }}
+        />
+      )}
+
       {addOpen && (
         <AddTransactionModal
           accounts={accounts}
           editing={editingTx}
           onClose={() => { setAddOpen(false); setEditingTx(null); }}
-          onSave={tx => { upsertTx(tx); setAddOpen(false); setEditingTx(null); }}
-          onDelete={editingTx?.id ? () => { deleteTx(editingTx.id!); setAddOpen(false); setEditingTx(null); } : null}
+          onSave={tx => { finance.upsertTx(tx); setAddOpen(false); setEditingTx(null); }}
+          onDelete={editingTx?.id ? () => { finance.deleteTx(editingTx.id!); setAddOpen(false); setEditingTx(null); } : null}
         />
       )}
 
@@ -264,9 +194,22 @@ const App = () => {
         </div>
       )}
 
-      <SettingsPanel tweaks={tweaks} setTweak={setTweak} onReset={handleReset} />
+      <SettingsPanel
+        tweaks={tweaks}
+        setTweak={setTweak}
+        onLoadSeed={finance.handleLoadSeed}
+        onClearAll={finance.handleClearAll}
+        onSignOut={() => supabase.auth.signOut()}
+        userEmail={session.user.email ?? ''}
+      />
     </div>
   );
 };
+
+const Spinner = () => (
+  <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg, #FFF8F0)' }}>
+    <FinAngelMini size={40} mood="chill" />
+  </div>
+);
 
 export default App;

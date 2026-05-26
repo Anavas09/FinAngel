@@ -26,12 +26,22 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
       return s + Math.abs(t.amount) * (a ? FX_TO_ARS[a.currency] : 0);
     }, 0);
 
+  const sanitizeCell = (val: string) =>
+    /^[=+\-@\t\r]/.test(val) ? `'${val}` : val;
+
   const downloadCSV = () => {
     const rows: (string | number)[][] = [
       ['Fecha', 'Cuenta', 'Moneda', 'Categoría', 'Nota', 'Monto'],
       ...transactions.map(t => {
         const a = accounts.find(x => x.id === t.accountId);
-        return [t.date, a?.name ?? '', a?.currency ?? '', catById(t.categoryId).label, t.note, t.amount];
+        return [
+          t.date,
+          sanitizeCell(a?.name ?? ''),
+          a?.currency ?? '',
+          sanitizeCell(catById(t.categoryId).label),
+          sanitizeCell(t.note),
+          t.amount,
+        ];
       }),
     ];
     const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');

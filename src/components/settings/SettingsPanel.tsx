@@ -4,7 +4,10 @@ import type { Tweaks } from '../../types';
 interface SettingsPanelProps {
   tweaks: Tweaks;
   setTweak: <K extends keyof Tweaks>(key: K, value: Tweaks[K]) => void;
-  onReset: () => void;
+  onLoadSeed: () => void;
+  onClearAll: () => void;
+  onSignOut: () => void;
+  userEmail: string;
 }
 
 interface RowProps {
@@ -19,7 +22,7 @@ interface ToggleBtnProps {
 
 const ACCENT_COLORS = ['#FF5C4D', '#5BB890', '#7EC4F2', '#D4C5F9', '#F2C94C'];
 
-export const SettingsPanel = ({ tweaks, setTweak, onReset }: SettingsPanelProps) => {
+export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail }: SettingsPanelProps) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -61,8 +64,9 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }: SettingsPanelProps)
             width: 280,
             display: 'flex', flexDirection: 'column', gap: 16,
           }}>
-            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink, #1D1A18)', borderBottom: '2px dashed var(--line-soft, #DBCFB4)', paddingBottom: 10 }}>
-              ⚙️ Configuración
+            <div style={{ borderBottom: '2px dashed var(--line-soft, #DBCFB4)', paddingBottom: 10 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink, #1D1A18)' }}>⚙️ Configuración</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-muted, #8A7E72)', marginTop: 2, wordBreak: 'break-all' }}>{userEmail}</div>
             </div>
 
             <Row label="Privacidad">
@@ -119,7 +123,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }: SettingsPanelProps)
             </Row>
 
             <button
-              onClick={() => { onReset(); setOpen(false); }}
+              onClick={() => { onLoadSeed(); setOpen(false); }}
               style={{
                 padding: '10px 16px',
                 border: '2px solid var(--line, #1D1A18)',
@@ -132,7 +136,39 @@ export const SettingsPanel = ({ tweaks, setTweak, onReset }: SettingsPanelProps)
                 marginTop: 4,
               }}
             >
-              Resetear datos de ejemplo
+              Cargar datos de ejemplo
+            </button>
+
+            <button
+              onClick={() => { onClearAll(); setOpen(false); }}
+              style={{
+                padding: '10px 16px',
+                border: '2px solid #C44A3D',
+                borderRadius: 999,
+                background: 'white',
+                fontWeight: 700, fontSize: 13,
+                cursor: 'pointer',
+                color: '#C44A3D',
+                boxShadow: '2px 2px 0 #C44A3D',
+              }}
+            >
+              Borrar todos los datos
+            </button>
+
+            <button
+              onClick={onSignOut}
+              style={{
+                padding: '10px 16px',
+                border: '2px solid #C44A3D',
+                borderRadius: 999,
+                background: 'white',
+                fontWeight: 700, fontSize: 13,
+                cursor: 'pointer',
+                color: '#C44A3D',
+                boxShadow: '2px 2px 0 #C44A3D',
+              }}
+            >
+              Cerrar sesión
             </button>
           </div>
         </>
