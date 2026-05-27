@@ -19,11 +19,13 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? 'comida');
   const [note, setNote] = useState(editing?.note ?? '');
   const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
+  const [amountError, setAmountError] = useState(false);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
-    if (!num || isNaN(num)) return;
+    if (!num || isNaN(num) || num <= 0) { setAmountError(true); return; }
+    setAmountError(false);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
@@ -65,18 +67,19 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
 
           <label className="fa-field fa-field-amount">
             <span className="fa-field-label">Monto</span>
-            <div className="fa-amount-input">
+            <div className="fa-amount-input" style={amountError ? { border: '2px solid #C44A3D', borderRadius: 12 } : undefined}>
               <span className="fa-amount-currency">{selectedAccount?.symbol ?? '$'}</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={e => { if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
+                onChange={e => { setAmountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
                 placeholder="0"
                 autoFocus
               />
               <span className="fa-amount-ccy">{selectedAccount?.currency}</span>
             </div>
+            {amountError && <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>Ingresá un monto válido mayor a cero</span>}
           </label>
 
           <label className="fa-field">

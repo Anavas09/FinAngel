@@ -8,6 +8,8 @@ interface SettingsPanelProps {
   onClearAll: () => void;
   onSignOut: () => void;
   userEmail: string;
+  userName: string;
+  onUpdateName: (name: string) => Promise<void>;
 }
 
 interface RowProps {
@@ -22,8 +24,11 @@ interface ToggleBtnProps {
 
 const ACCENT_COLORS = ['#FF5C4D', '#5BB890', '#7EC4F2', '#D4C5F9', '#F2C94C'];
 
-export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail }: SettingsPanelProps) => {
+export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail, userName, onUpdateName }: SettingsPanelProps) => {
   const [open, setOpen] = useState(false);
+  const [editName, setEditName] = useState(userName);
+  const [savingName, setSavingName] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   return (
     <>
@@ -64,9 +69,40 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
             width: 280,
             display: 'flex', flexDirection: 'column', gap: 16,
           }}>
-            <div style={{ borderBottom: '2px dashed var(--line-soft, #DBCFB4)', paddingBottom: 10 }}>
-              <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink, #1D1A18)' }}>⚙️ Configuración</div>
-              <div style={{ fontSize: 12, color: 'var(--ink-muted, #8A7E72)', marginTop: 2, wordBreak: 'break-all' }}>{userEmail}</div>
+            <div style={{ borderBottom: '2px dashed var(--line-soft, #DBCFB4)', paddingBottom: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink, #1D1A18)', marginBottom: 8 }}>⚙️ Configuración</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="fa-input"
+                  style={{ flex: 1, fontSize: 13, padding: '6px 10px' }}
+                  type="text"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="Tu nombre"
+                  autoComplete="given-name"
+                />
+                <button
+                  onClick={async () => {
+                    setSavingName(true);
+                    await onUpdateName(editName.trim());
+                    setSavingName(false);
+                  }}
+                  disabled={savingName || editName.trim() === userName}
+                  style={{
+                    padding: '6px 12px',
+                    border: '2px solid var(--line, #1D1A18)',
+                    borderRadius: 10,
+                    background: 'white',
+                    fontWeight: 700, fontSize: 12,
+                    cursor: 'pointer',
+                    color: 'var(--ink, #1D1A18)',
+                    opacity: (savingName || editName.trim() === userName) ? 0.4 : 1,
+                  }}
+                >
+                  {savingName ? '...' : 'OK'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ink-muted, #8A7E72)', marginTop: 4, wordBreak: 'break-all' }}>{userEmail}</div>
             </div>
 
             <Row label="Privacidad">
@@ -139,21 +175,43 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
               Cargar datos de ejemplo
             </button>
 
-            <button
-              onClick={() => { onClearAll(); setOpen(false); }}
-              style={{
-                padding: '10px 16px',
-                border: '2px solid #C44A3D',
-                borderRadius: 999,
-                background: 'white',
-                fontWeight: 700, fontSize: 13,
-                cursor: 'pointer',
-                color: '#C44A3D',
-                boxShadow: '2px 2px 0 #C44A3D',
-              }}
-            >
-              Borrar todos los datos
-            </button>
+            {confirmClear ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#C44A3D', textAlign: 'center' }}>
+                  ¿Borrar todo? Esta acción no se puede deshacer.
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    style={{ flex: 1, padding: '8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 999, background: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => { onClearAll(); setConfirmClear(false); setOpen(false); }}
+                    style={{ flex: 1, padding: '8px', border: '2px solid #C44A3D', borderRadius: 999, background: '#C44A3D', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: 'white' }}
+                  >
+                    Sí, borrar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmClear(true)}
+                style={{
+                  padding: '10px 16px',
+                  border: '2px solid #C44A3D',
+                  borderRadius: 999,
+                  background: 'white',
+                  fontWeight: 700, fontSize: 13,
+                  cursor: 'pointer',
+                  color: '#C44A3D',
+                  boxShadow: '2px 2px 0 #C44A3D',
+                }}
+              >
+                Borrar todos los datos
+              </button>
+            )}
 
             <button
               onClick={onSignOut}

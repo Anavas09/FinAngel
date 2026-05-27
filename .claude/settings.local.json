@@ -1,5 +1,7 @@
 {
   "permissions": {
-    "allow": []
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\" -Recurse -Name)"
+    ]
   }
 }

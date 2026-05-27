@@ -4,6 +4,7 @@ import { FinAngel } from '../mascot/Mascot';
 
 export const AuthScreen = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,10 @@ export const AuthScreen = () => {
     setLoading(true);
     try {
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({
+          email, password,
+          options: { data: { full_name: fullName.trim() } },
+        });
         if (error) throw error;
         setMessage('Revisá tu email para confirmar el registro.');
       } else {
@@ -54,6 +58,21 @@ export const AuthScreen = () => {
         </p>
 
         <form onSubmit={submit} className="fa-form" style={{ width: '100%' }}>
+          {mode === 'signup' && (
+            <label className="fa-field">
+              <span className="fa-field-label">Nombre</span>
+              <input
+                className="fa-input"
+                type="text"
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="Tu nombre"
+                required
+                autoComplete="given-name"
+              />
+            </label>
+          )}
+
           <label className="fa-field">
             <span className="fa-field-label">Email</span>
             <input
@@ -101,7 +120,7 @@ export const AuthScreen = () => {
         <button
           className="fa-link"
           style={{ marginTop: 8, fontSize: 13 }}
-          onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null); setMessage(null); }}
+          onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setError(null); setMessage(null); setFullName(''); }}
         >
           {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
         </button>

@@ -5,6 +5,7 @@ interface GreetingCardProps {
   mood: MascotState;
   line: string;
   layout: Layout;
+  userName?: string;
 }
 
 const greetingTime = (): string => {
@@ -35,7 +36,7 @@ const SparklesDecor = () => (
   </svg>
 );
 
-export const GreetingCard = ({ mood, line, layout }: GreetingCardProps) => {
+export const GreetingCard = ({ mood, line, layout, userName }: GreetingCardProps) => {
   const moodColors: Partial<Record<MascotState, string>> = {
     happy: '#FFE9D6', celebrating: '#FFF1B8', worried: '#FFD9C7',
   };
@@ -43,7 +44,7 @@ export const GreetingCard = ({ mood, line, layout }: GreetingCardProps) => {
   return (
     <section className="fa-greeting" style={{ '--mood-bg': moodColor } as React.CSSProperties}>
       <div className="fa-greeting-text">
-        <span className="fa-greeting-eyebrow">{greetingTime()}, Cami 👋</span>
+        <span className="fa-greeting-eyebrow">{greetingTime()}{userName ? `, ${userName}` : ''} 👋</span>
         <h1 className="fa-greeting-title">{line}</h1>
         <div className="fa-greeting-chips">
           <span className="fa-chip">📅 Mayo 2026</span>

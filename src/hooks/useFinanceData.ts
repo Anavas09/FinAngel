@@ -46,11 +46,22 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
   // --- Transacciones ---
 
   const upsertTx = (tx: TransactionInput) => {
-    if (tx.id && transactions.find(t => t.id === tx.id)) {
+    const existing = tx.id ? transactions.find(t => t.id === tx.id) : undefined;
+    if (existing) {
       const updated = tx as Transaction;
+      const delta = updated.amount - existing.amount;
+      const newAccounts = accounts.map(a =>
+        a.id === updated.accountId ? { ...a, balance: a.balance + delta } : a
+      );
       setTransactions(prev => prev.map(t => t.id === tx.id ? updated : t));
-      updateTransaction(updated).catch(() => {
+      setAccounts(newAccounts);
+      const newBalance = newAccounts.find(a => a.id === updated.accountId)!.balance;
+      Promise.all([
+        updateTransaction(updated),
+        updateAccountBalance(updated.accountId, newBalance),
+      ]).catch(() => {
         setTransactions(transactions);
+        setAccounts(accounts);
         showToast('Error al actualizar el movimiento');
       });
       showToast('Movimiento actualizado');
@@ -74,9 +85,9 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     }
   };
 
-  const deleteTx = (id: string) => {
+  const deleteTx = (id: string): (() => void) => {
     const tx = transactions.find(t => t.id === id);
-    if (!tx) return;
+    if (!tx) return () => {};
     const newAccounts = accounts.map(a =>
       a.id === tx.accountId ? { ...a, balance: a.balance - tx.amount } : a
     );
@@ -93,7 +104,19 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
       setAccounts(prevAccounts);
       showToast('Error al eliminar el movimiento');
     });
-    showToast('Movimiento eliminado');
+    return () => {
+      setTransactions(prevTransactions);
+      setAccounts(prevAccounts);
+      const restoredBalance = prevAccounts.find(a => a.id === tx.accountId)!.balance;
+      Promise.all([
+        insertTransaction(tx, session!.user.id),
+        updateAccountBalance(tx.accountId, restoredBalance),
+      ]).catch(() => {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        setAccounts(newAccounts);
+        showToast('Error al restaurar el movimiento');
+      });
+    };
   };
 
   // --- Gestión de datos ---

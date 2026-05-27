@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { TopBar } from './components/layout/TopBar';
 import { GreetingCard } from './components/dashboard/GreetingCard';
@@ -26,6 +26,7 @@ const App = () => {
   const { privacy, mascotPersonality: personality, layout, primaryAccent: accent } = tweaks;
 
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const userName = (session?.user.user_metadata?.full_name as string | undefined) ?? '';
 
   // UI state
   const [addOpen, setAddOpen]               = useState(false);
@@ -34,11 +35,16 @@ const App = () => {
   const [exportOpen, setExportOpen]         = useState(false);
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
-  const [toast, setToast]                   = useState<string | null>(null);
+  const [toast, setToast]                   = useState<{ msg: string; onUndo?: () => void } | null>(null);
+  const [txSearch, setTxSearch]             = useState('');
+  const [txPeriod, setTxPeriod]             = useState('');
+  const [visibleTxCount, setVisibleTxCount] = useState(12);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2200);
+  const showToast = (msg: string, onUndo?: () => void) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ msg, onUndo });
+    toastTimerRef.current = setTimeout(() => setToast(null), onUndo ? 4000 : 2200);
   };
 
   useEffect(() => {
@@ -61,6 +67,23 @@ const App = () => {
     return lines[Math.floor(Math.random() * lines.length)];
   }, [personality, mood]);
 
+  const txMonths = useMemo(() => {
+    const months = new Set(finance.transactions.map(t => t.date.slice(0, 7)));
+    return Array.from(months).sort().reverse();
+  }, [finance.transactions]);
+
+  const filteredTx = useMemo(() => {
+    return finance.transactions.filter(t => {
+      if (txPeriod && !t.date.startsWith(txPeriod)) return false;
+      if (txSearch) {
+        const q = txSearch.toLowerCase();
+        const acc = finance.accounts.find(a => a.id === t.accountId);
+        if (!t.note.toLowerCase().includes(q) && !acc?.name.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [finance.transactions, finance.accounts, txPeriod, txSearch]);
+
   // --- Render guards ---
   if (session === undefined) return <Spinner />;
   if (!session) return <AuthScreen />;
@@ -73,7 +96,7 @@ const App = () => {
       <TopBar onExport={() => setExportOpen(true)} theme={theme} setTheme={setTheme} />
 
       <main className="fa-main">
-        <GreetingCard mood={mascotMood} line={mascotLine} layout={layout} />
+        <GreetingCard mood={mascotMood} line={mascotLine} layout={layout} userName={userName} />
 
         <TotalCard
           totalARS={totalInARS}
@@ -138,12 +161,42 @@ const App = () => {
             <h2>Últimos movimientos</h2>
             <button className="fa-link" onClick={() => setExportOpen(true)}>Exportar resumen ↗</button>
           </header>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <input
+              className="fa-input"
+              type="text"
+              placeholder="Buscar nota o cuenta…"
+              value={txSearch}
+              onChange={e => { setTxSearch(e.target.value); setVisibleTxCount(12); }}
+              style={{ flex: 1, fontSize: 13 }}
+            />
+            <select
+              className="fa-input"
+              value={txPeriod}
+              onChange={e => { setTxPeriod(e.target.value); setVisibleTxCount(12); }}
+              style={{ fontSize: 13, minWidth: 110 }}
+            >
+              <option value="">Todos</option>
+              {txMonths.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
           <TransactionList
-            transactions={transactions.slice(0, 12)}
+            transactions={filteredTx.slice(0, visibleTxCount)}
             accounts={accounts}
             privacy={privacy}
             onEdit={tx => { setEditingTx(tx); setAddOpen(true); }}
           />
+          {filteredTx.length > visibleTxCount && (
+            <button
+              className="fa-link"
+              onClick={() => setVisibleTxCount(c => c + 12)}
+              style={{ display: 'block', margin: '12px auto 0', fontSize: 13 }}
+            >
+              Ver más ({filteredTx.length - visibleTxCount} restantes)
+            </button>
+          )}
         </section>
 
         <div className="fa-footer">
@@ -173,7 +226,12 @@ const App = () => {
           editing={editingTx}
           onClose={() => { setAddOpen(false); setEditingTx(null); }}
           onSave={tx => { finance.upsertTx(tx); setAddOpen(false); setEditingTx(null); }}
-          onDelete={editingTx?.id ? () => { finance.deleteTx(editingTx.id!); setAddOpen(false); setEditingTx(null); } : null}
+          onDelete={editingTx?.id ? () => {
+            const undo = finance.deleteTx(editingTx.id!);
+            setAddOpen(false);
+            setEditingTx(null);
+            showToast('Movimiento eliminado', undo);
+          } : null}
         />
       )}
 
@@ -190,7 +248,15 @@ const App = () => {
       {toast && (
         <div className="fa-toast">
           <FinAngelMini size={28} mood="happy" />
-          <span>{toast}</span>
+          <span>{toast.msg}</span>
+          {toast.onUndo && (
+            <button
+              onClick={() => { toast.onUndo!(); setToast(null); }}
+              style={{ marginLeft: 8, fontWeight: 700, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit' }}
+            >
+              Deshacer
+            </button>
+          )}
         </div>
       )}
 
@@ -201,6 +267,10 @@ const App = () => {
         onClearAll={finance.handleClearAll}
         onSignOut={() => supabase.auth.signOut()}
         userEmail={session.user.email ?? ''}
+        userName={userName}
+        onUpdateName={async (name) => {
+          await supabase.auth.updateUser({ data: { full_name: name } });
+        }}
       />
     </div>
   );
