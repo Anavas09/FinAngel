@@ -6,7 +6,6 @@ import {
   updateAccountBalance, updateAccountVisibility, deleteAccountById,
   fetchBudgets, upsertBudget, deleteBudget, clearUserData,
 } from '../lib/db';
-import { FX_TO_ARS } from '../data/constants';
 import type { Account, Budget, ChartDataItem, Currency, Transaction, TransactionInput } from '../types';
 
 const isoWeekKey = (d: Date) => {
@@ -37,7 +36,7 @@ const autoGenerateRecurring = (txs: Transaction[], now: Date): Transaction[] => 
   return generated;
 };
 
-export const useFinanceData = (session: Session | null, showToast: (msg: string) => void) => {
+export const useFinanceData = (session: Session | null, showToast: (msg: string) => void, fxRates: Record<Currency, number>) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -259,7 +258,7 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
   }, [visibleAccounts]);
 
   const totalInARS = useMemo(
-    () => visibleAccounts.reduce((s, a) => s + a.balance * (FX_TO_ARS[a.currency] ?? 0), 0),
+    () => visibleAccounts.reduce((s, a) => s + a.balance * (fxRates[a.currency] ?? 0), 0),
     [visibleAccounts]
   );
 
@@ -276,7 +275,7 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     thisMonth.forEach(t => {
       if (t.amount >= 0) return;
       const a = accounts.find(x => x.id === t.accountId);
-      const ars = Math.abs(t.amount) * (a ? FX_TO_ARS[a.currency] : 0);
+      const ars = Math.abs(t.amount) * (a ? fxRates[a.currency] : 0);
       byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + ars;
     });
     const catMap: Record<string, { label: string; color: string; icon: string }> = {
@@ -301,7 +300,7 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     let inc = 0, exp = 0;
     thisMonth.forEach(t => {
       const a = accounts.find(x => x.id === t.accountId);
-      const ars = t.amount * (a ? FX_TO_ARS[a.currency] : 0);
+      const ars = t.amount * (a ? fxRates[a.currency] : 0);
       if (ars >= 0) inc += ars; else exp += Math.abs(ars);
     });
     return [

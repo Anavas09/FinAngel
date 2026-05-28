@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { TopBar } from './components/layout/TopBar';
 import { GreetingCard } from './components/dashboard/GreetingCard';
@@ -6,20 +6,21 @@ import { TotalCard } from './components/dashboard/TotalCard';
 import { AccountCard } from './components/dashboard/AccountCard';
 import { ChartCard } from './components/charts/ChartCard';
 import { TransactionList } from './components/transactions/TransactionList';
-import { AddTransactionModal } from './components/transactions/AddTransactionModal';
-import { TransferModal } from './components/transactions/TransferModal';
-import { AddAccountModal } from './components/accounts/AddAccountModal';
-import { ExportModal } from './components/transactions/ExportModal';
 import { SettingsPanel } from './components/settings/SettingsPanel';
+
+const AddTransactionModal = lazy(() => import('./components/transactions/AddTransactionModal').then(m => ({ default: m.AddTransactionModal })));
+const TransferModal        = lazy(() => import('./components/transactions/TransferModal').then(m => ({ default: m.TransferModal })));
+const AddAccountModal      = lazy(() => import('./components/accounts/AddAccountModal').then(m => ({ default: m.AddAccountModal })));
+const ExportModal          = lazy(() => import('./components/transactions/ExportModal').then(m => ({ default: m.ExportModal })));
 import { AuthScreen } from './components/auth/AuthScreen';
 import { FinAngelMini } from './components/mascot/Mascot';
 import { useTheme } from './hooks/useTheme';
 import { useTweaks } from './hooks/useTweaks';
 import { useFinanceData } from './hooks/useFinanceData';
+import { useModalState } from './hooks/useModalState';
+import { useMascot } from './hooks/useMascot';
 import { supabase } from './lib/supabase';
-import { MASCOT_COPY } from './data/constants';
 import { fmtMoney } from './data/utils';
-import type { MascotMood, MascotState, TransactionInput } from './types';
 
 const App = () => {
   const { theme, setTheme } = useTheme();
@@ -29,25 +30,15 @@ const App = () => {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const userName = (session?.user.user_metadata?.full_name as string | undefined) ?? '';
 
-  // UI state
-  const [addOpen, setAddOpen]               = useState(false);
-  const [addAccountOpen, setAddAccountOpen] = useState(false);
-  const [editingTx, setEditingTx]           = useState<TransactionInput | null>(null);
-  const [exportOpen, setExportOpen]         = useState(false);
-  const [transferOpen, setTransferOpen]     = useState(false);
+  const modals = useModalState();
+  const { addOpen, setAddOpen, addAccountOpen, setAddAccountOpen, editingTx, setEditingTx,
+          exportOpen, setExportOpen, transferOpen, setTransferOpen, toast, showToast, clearToast } = modals;
+
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
-  const [toast, setToast]                   = useState<{ msg: string; onUndo?: () => void } | null>(null);
   const [txSearch, setTxSearch]             = useState('');
   const [txPeriod, setTxPeriod]             = useState('');
   const [visibleTxCount, setVisibleTxCount] = useState(12);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showToast = (msg: string, onUndo?: () => void) => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ msg, onUndo });
-    toastTimerRef.current = setTimeout(() => setToast(null), onUndo ? 4000 : 2200);
-  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -59,15 +50,9 @@ const App = () => {
     document.documentElement.style.setProperty('--accent', accent);
   }, [accent]);
 
-  const finance = useFinanceData(session ?? null, showToast);
+  const finance = useFinanceData(session ?? null, showToast, { ARS: 1, USD: tweaks.fxUSD, USDT: tweaks.fxUSDT });
 
-  // Mascot
-  const mood: MascotMood = finance.monthNet > finance.flowData[0].value * 0.2 ? 'great' : finance.monthNet > 0 ? 'ok' : 'warn';
-  const mascotMood: MascotState = ({ great: 'celebrating', ok: 'happy', warn: 'worried' } as const)[mood];
-  const mascotLine = useMemo(() => {
-    const lines = MASCOT_COPY[personality]?.[mood] ?? MASCOT_COPY.motivadora[mood];
-    return lines[Math.floor(Math.random() * lines.length)];
-  }, [personality, mood]);
+  const { mascotMood, mascotLine } = useMascot(finance.monthNet, finance.flowData[0].value, personality);
 
   const txMonths = useMemo(() => {
     const months = new Set(finance.transactions.map(t => t.date.slice(0, 7)));
@@ -217,48 +202,56 @@ const App = () => {
         <span className="fa-fab-label">Agregar</span>
       </button>
 
-      {transferOpen && (
-        <TransferModal
-          accounts={accounts}
-          onClose={() => setTransferOpen(false)}
-          onSave={(fromId, toId, amount, date, note) => {
-            finance.insertTransfer(fromId, toId, amount, date, note);
-            setTransferOpen(false);
-          }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {transferOpen && (
+          <TransferModal
+            accounts={accounts}
+            onClose={() => setTransferOpen(false)}
+            onSave={(fromId, toId, amount, date, note) => {
+              finance.insertTransfer(fromId, toId, amount, date, note);
+              setTransferOpen(false);
+            }}
+          />
+        )}
+      </Suspense>
 
-      {addAccountOpen && (
-        <AddAccountModal
-          onClose={() => setAddAccountOpen(false)}
-          onSave={fields => { finance.addAccount(fields); setAddAccountOpen(false); }}
-        />
-      )}
+      <Suspense fallback={null}>
+        {addAccountOpen && (
+          <AddAccountModal
+            onClose={() => setAddAccountOpen(false)}
+            onSave={fields => { finance.addAccount(fields); setAddAccountOpen(false); }}
+          />
+        )}
+      </Suspense>
 
-      {addOpen && (
-        <AddTransactionModal
-          accounts={accounts}
-          editing={editingTx}
-          onClose={() => { setAddOpen(false); setEditingTx(null); }}
-          onSave={tx => { finance.upsertTx(tx); setAddOpen(false); setEditingTx(null); }}
-          onDelete={editingTx?.id ? () => {
-            const undo = finance.deleteTx(editingTx.id!);
-            setAddOpen(false);
-            setEditingTx(null);
-            showToast('Movimiento eliminado', undo);
-          } : null}
-        />
-      )}
+      <Suspense fallback={null}>
+        {addOpen && (
+          <AddTransactionModal
+            accounts={accounts}
+            editing={editingTx}
+            onClose={() => { setAddOpen(false); setEditingTx(null); }}
+            onSave={tx => { finance.upsertTx(tx); setAddOpen(false); setEditingTx(null); }}
+            onDelete={editingTx?.id ? () => {
+              const undo = finance.deleteTx(editingTx.id!);
+              setAddOpen(false);
+              setEditingTx(null);
+              showToast('Movimiento eliminado', undo);
+            } : null}
+          />
+        )}
+      </Suspense>
 
-      {exportOpen && (
-        <ExportModal
-          accounts={accounts}
-          transactions={transactions}
-          totalARS={totalInARS}
-          onClose={() => setExportOpen(false)}
-          onToast={showToast}
-        />
-      )}
+      <Suspense fallback={null}>
+        {exportOpen && (
+          <ExportModal
+            accounts={accounts}
+            transactions={transactions}
+            totalARS={totalInARS}
+            onClose={() => setExportOpen(false)}
+            onToast={showToast}
+          />
+        )}
+      </Suspense>
 
       {toast && (
         <div className="fa-toast">
@@ -266,7 +259,7 @@ const App = () => {
           <span>{toast.msg}</span>
           {toast.onUndo && (
             <button
-              onClick={() => { toast.onUndo!(); setToast(null); }}
+              onClick={() => { toast.onUndo!(); clearToast(); }}
               style={{ marginLeft: 8, fontWeight: 700, textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit' }}
             >
               Deshacer

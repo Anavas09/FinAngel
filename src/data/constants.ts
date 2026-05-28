@@ -69,6 +69,8 @@ export const DEFAULT_TWEAKS: Tweaks = {
   mascotPersonality: 'motivadora',
   layout: 'saludo',
   primaryAccent: '#FF5C4D',
+  fxUSD: 1180,
+  fxUSDT: 1190,
 };
 
 export const LS_KEY = 'finangel:v1';

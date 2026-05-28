@@ -33,6 +33,8 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
   const [editName, setEditName] = useState(userName);
   const [savingName, setSavingName] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [fxUSDInput, setFxUSDInput] = useState(String(tweaks.fxUSD));
+  const [fxUSDTInput, setFxUSDTInput] = useState(String(tweaks.fxUSDT));
   const [budgetInputs, setBudgetInputs] = useState<Record<string, string>>(() =>
     budgets.reduce<Record<string, string>>((acc, b) => ({ ...acc, [b.categoryId]: String(b.amount) }), {})
   );
@@ -170,6 +172,37 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                 ))}
               </div>
             </Row>
+
+            <div style={{ borderTop: '2px dashed var(--line-soft, #DBCFB4)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--ink, #1D1A18)' }}>Tipos de cambio (a ARS)</div>
+              {([
+                { label: 'Dólar (USD)', key: 'fxUSD' as const, val: fxUSDInput, set: setFxUSDInput },
+                { label: 'USDT',        key: 'fxUSDT' as const, val: fxUSDTInput, set: setFxUSDTInput },
+              ] as const).map(({ label, key, val, set }) => {
+                const saved = tweaks[key];
+                const isDirty = val !== String(saved);
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, flex: 1, color: 'var(--ink, #1D1A18)' }}>{label}</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={val}
+                      onChange={e => set(e.target.value)}
+                      style={{ width: 72, padding: '4px 8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 8, fontWeight: 700, fontSize: 12, outline: 'none' }}
+                    />
+                    {isDirty && (
+                      <button
+                        onClick={() => { const n = parseFloat(val); if (n > 0) setTweak(key, n); }}
+                        style={{ padding: '4px 8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 8, background: 'var(--mint, #B8E6C9)', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}
+                      >
+                        OK
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
             <div style={{ borderTop: '2px dashed var(--line-soft, #DBCFB4)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--ink, #1D1A18)' }}>Presupuestos mensuales (ARS)</div>

@@ -53,6 +53,8 @@ export interface Tweaks {
   mascotPersonality: MascotPersonality;
   layout: Layout;
   primaryAccent: string;
+  fxUSD: number;
+  fxUSDT: number;
 }
 
 export interface Budget {
