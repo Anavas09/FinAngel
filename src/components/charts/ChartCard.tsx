@@ -1,6 +1,6 @@
 import { Donut } from './Donut';
 import { fmtMoney } from '../../data/utils';
-import type { ChartDataItem } from '../../types';
+import type { Budget, ChartDataItem } from '../../types';
 
 interface ChartCardProps {
   title: string;
@@ -12,9 +12,10 @@ interface ChartCardProps {
   onHover: (idx: number | null) => void;
   mode?: string;
   privacy: boolean;
+  budgets?: Budget[];
 }
 
-export const ChartCard = ({ title, sub, data, centerLabel, centerValue, hoverIdx, onHover, mode, privacy }: ChartCardProps) => {
+export const ChartCard = ({ title, sub, data, centerLabel, centerValue, hoverIdx, onHover, mode, privacy, budgets }: ChartCardProps) => {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   return (
     <article className="fa-chart-card">
@@ -51,6 +52,22 @@ export const ChartCard = ({ title, sub, data, centerLabel, centerValue, hoverIdx
                 </span>
                 <span className="fa-legend-pct">{pct}%</span>
                 <span className="fa-legend-value">{fmtMoney(d.value, 'ARS', privacy)}</span>
+                {budgets && (() => {
+                  const budget = budgets.find(b => b.categoryId === d.id);
+                  if (!budget) return null;
+                  const used = Math.min((d.value / budget.amount) * 100, 100);
+                  const barColor = d.value > budget.amount ? '#F26B5E' : used > 80 ? '#F2C94C' : '#5BB890';
+                  return (
+                    <div style={{ gridColumn: '1 / -1', marginTop: 2, marginBottom: 2 }}>
+                      <div style={{ height: 4, background: 'var(--bg-warm, #F5EDD8)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${used}%`, height: '100%', background: barColor, borderRadius: 2, transition: 'width 400ms' }} />
+                      </div>
+                      <span style={{ fontSize: 10, color: 'var(--ink-muted, #8A7E72)', marginTop: 2, display: 'block' }}>
+                        {fmtMoney(d.value, 'ARS', privacy)} / {fmtMoney(budget.amount, 'ARS', privacy)}
+                      </span>
+                    </div>
+                  );
+                })()}
               </li>
             );
           })}

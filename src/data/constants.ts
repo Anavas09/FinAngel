@@ -17,6 +17,7 @@ export const CATEGORIES: Category[] = [
   { id: 'ahorro',           label: 'Ahorro',          color: '#F49B8A', icon: '🐷' },
   { id: 'ingreso',          label: 'Ingreso',         color: '#5BB890', icon: '💰' },
   { id: 'otros',            label: 'Otros',           color: '#B8B0A0', icon: '✨' },
+  { id: 'transfer',         label: 'Transferencia',   color: '#A78BFA', icon: '↔️' },
 ];
 
 export const catById = (id: string): Category =>

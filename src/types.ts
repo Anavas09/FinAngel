@@ -23,6 +23,7 @@ export interface Transaction {
   categoryId: string;
   amount: number;
   note: string;
+  recurring?: 'monthly' | 'weekly';
 }
 
 export type TransactionInput = Omit<Transaction, 'id'> & { id?: string };
@@ -52,6 +53,12 @@ export interface Tweaks {
   mascotPersonality: MascotPersonality;
   layout: Layout;
   primaryAccent: string;
+}
+
+export interface Budget {
+  id: string;
+  categoryId: string;
+  amount: number;
 }
 
 export interface ChartDataItem {

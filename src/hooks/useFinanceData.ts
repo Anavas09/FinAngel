@@ -3,21 +3,70 @@ import type { Session } from '@supabase/supabase-js';
 import {
   fetchAccounts, fetchTransactions, seedUserData,
   insertAccount, insertTransaction, updateTransaction, deleteTransactionById,
-  updateAccountBalance, updateAccountVisibility, clearUserData,
+  updateAccountBalance, updateAccountVisibility, deleteAccountById,
+  fetchBudgets, upsertBudget, deleteBudget, clearUserData,
 } from '../lib/db';
 import { FX_TO_ARS } from '../data/constants';
-import type { Account, ChartDataItem, Currency, Transaction, TransactionInput } from '../types';
+import type { Account, Budget, ChartDataItem, Currency, Transaction, TransactionInput } from '../types';
+
+const isoWeekKey = (d: Date) => {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+};
+
+const autoGenerateRecurring = (txs: Transaction[], now: Date): Transaction[] => {
+  const generated: Transaction[] = [];
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentWeek = isoWeekKey(now);
+  const today = now.toISOString().slice(0, 10);
+
+  txs.filter(t => t.recurring).forEach((t, i) => {
+    const period = t.recurring === 'monthly' ? currentMonth : currentWeek;
+    const txPeriod = t.recurring === 'monthly' ? t.date.slice(0, 7) : isoWeekKey(new Date(t.date));
+    if (txPeriod === period) return;
+    const alreadyExists = txs.some(
+      x => !x.recurring && (t.recurring === 'monthly' ? x.date.startsWith(currentMonth) : isoWeekKey(new Date(x.date)) === currentWeek)
+           && x.note === t.note && x.accountId === t.accountId && x.amount === t.amount
+    );
+    if (alreadyExists) return;
+    generated.push({ id: `t_rec_${Date.now()}_${i}`, date: today, accountId: t.accountId, categoryId: t.categoryId, amount: t.amount, note: t.note });
+  });
+  return generated;
+};
 
 export const useFinanceData = (session: Session | null, showToast: (msg: string) => void) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!session) return;
     setLoading(true);
-    Promise.all([fetchAccounts(), fetchTransactions()])
-      .then(([accs, txs]) => { setAccounts(accs); setTransactions(txs); })
+    Promise.all([fetchAccounts(), fetchTransactions(), fetchBudgets()])
+      .then(([accs, txs, bgs]) => {
+        const generated = autoGenerateRecurring(txs, new Date());
+        if (generated.length === 0) {
+          setAccounts(accs); setTransactions(txs); setBudgets(bgs);
+          return;
+        }
+        const updatedAccounts = accs.map(a => {
+          const delta = generated.filter(t => t.accountId === a.id).reduce((s, t) => s + t.amount, 0);
+          return delta !== 0 ? { ...a, balance: a.balance + delta } : a;
+        });
+        setAccounts(updatedAccounts);
+        setTransactions([...generated, ...txs]);
+        setBudgets(bgs);
+        Promise.all([
+          ...generated.map(t => insertTransaction(t, session.user.id)),
+          ...updatedAccounts
+            .filter(a => generated.some(t => t.accountId === a.id))
+            .map(a => updateAccountBalance(a.id, a.balance)),
+        ]).catch(() => { setAccounts(accs); setTransactions(txs); });
+      })
       .finally(() => setLoading(false));
   }, [session]);
 
@@ -41,6 +90,66 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
       showToast('Error al crear la cuenta');
     });
     showToast('Cuenta creada');
+  };
+
+  const deleteAccount = (id: string) => {
+    const prevAccounts = accounts;
+    const prevTransactions = transactions;
+    setAccounts(prev => prev.filter(a => a.id !== id));
+    setTransactions(prev => prev.filter(t => t.accountId !== id));
+    deleteAccountById(id).catch(() => {
+      setAccounts(prevAccounts);
+      setTransactions(prevTransactions);
+      showToast('Error al eliminar la cuenta');
+    });
+    showToast('Cuenta eliminada');
+  };
+
+  const setBudget = (categoryId: string, amount: number) => {
+    const existing = budgets.find(b => b.categoryId === categoryId);
+    const newBudget: Budget = { id: existing?.id ?? 'b' + Date.now(), categoryId, amount };
+    setBudgets(prev => [...prev.filter(b => b.categoryId !== categoryId), newBudget]);
+    upsertBudget({ categoryId, amount }, session!.user.id).catch(() => {
+      setBudgets(budgets);
+      showToast('Error al guardar presupuesto');
+    });
+  };
+
+  const removeBudget = (categoryId: string) => {
+    setBudgets(prev => prev.filter(b => b.categoryId !== categoryId));
+    deleteBudget(categoryId).catch(() => {
+      setBudgets(budgets);
+      showToast('Error al eliminar presupuesto');
+    });
+  };
+
+  const insertTransfer = (fromId: string, toId: string, amount: number, date: string, note: string) => {
+    const id1 = 't' + Date.now();
+    const id2 = 't' + (Date.now() + 1);
+    const txOut: Transaction = { id: id1, date, accountId: fromId, categoryId: 'transfer', amount: -amount, note };
+    const txIn: Transaction  = { id: id2, date, accountId: toId,   categoryId: 'transfer', amount:  amount, note };
+    const newAccounts = accounts.map(a => {
+      if (a.id === fromId) return { ...a, balance: a.balance - amount };
+      if (a.id === toId)   return { ...a, balance: a.balance + amount };
+      return a;
+    });
+    const prevAccounts     = accounts;
+    const prevTransactions = transactions;
+    setTransactions(prev => [txIn, txOut, ...prev]);
+    setAccounts(newAccounts);
+    const fromBalance = newAccounts.find(a => a.id === fromId)!.balance;
+    const toBalance   = newAccounts.find(a => a.id === toId)!.balance;
+    Promise.all([
+      insertTransaction(txOut, session!.user.id),
+      insertTransaction(txIn,  session!.user.id),
+      updateAccountBalance(fromId, fromBalance),
+      updateAccountBalance(toId,   toBalance),
+    ]).catch(() => {
+      setTransactions(prevTransactions);
+      setAccounts(prevAccounts);
+      showToast('Error al registrar la transferencia');
+    });
+    showToast('Transferencia registrada');
   };
 
   // --- Transacciones ---
@@ -207,7 +316,8 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     accounts, transactions, loading,
     visibleAccounts, totalsByCcy, totalInARS,
     categoryData, flowData, monthNet,
-    toggleAccount, addAccount,
+    toggleAccount, addAccount, deleteAccount, insertTransfer,
+    budgets, setBudget, removeBudget,
     upsertTx, deleteTx,
     handleLoadSeed, handleClearAll,
   };

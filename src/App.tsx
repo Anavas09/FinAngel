@@ -7,6 +7,7 @@ import { AccountCard } from './components/dashboard/AccountCard';
 import { ChartCard } from './components/charts/ChartCard';
 import { TransactionList } from './components/transactions/TransactionList';
 import { AddTransactionModal } from './components/transactions/AddTransactionModal';
+import { TransferModal } from './components/transactions/TransferModal';
 import { AddAccountModal } from './components/accounts/AddAccountModal';
 import { ExportModal } from './components/transactions/ExportModal';
 import { SettingsPanel } from './components/settings/SettingsPanel';
@@ -33,6 +34,7 @@ const App = () => {
   const [addAccountOpen, setAddAccountOpen] = useState(false);
   const [editingTx, setEditingTx]           = useState<TransactionInput | null>(null);
   const [exportOpen, setExportOpen]         = useState(false);
+  const [transferOpen, setTransferOpen]     = useState(false);
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [toast, setToast]                   = useState<{ msg: string; onUndo?: () => void } | null>(null);
@@ -113,6 +115,7 @@ const App = () => {
               {accounts.length > 0 && (
                 <span className="fa-section-sub">{visibleAccounts.length} de {accounts.length} visibles</span>
               )}
+              <button className="fa-link" onClick={() => setTransferOpen(true)}>↔ Transferir</button>
               <button className="fa-link" onClick={() => setAddAccountOpen(true)}>+ Agregar</button>
             </div>
           </header>
@@ -126,7 +129,7 @@ const App = () => {
           ) : (
             <div className="fa-accounts">
               {accounts.map(a => (
-                <AccountCard key={a.id} account={a} onToggle={() => finance.toggleAccount(a.id)} privacy={privacy} />
+                <AccountCard key={a.id} account={a} onToggle={() => finance.toggleAccount(a.id)} privacy={privacy} onDelete={() => finance.deleteAccount(a.id)} />
               ))}
             </div>
           )}
@@ -142,6 +145,7 @@ const App = () => {
             hoverIdx={hoverCatIdx}
             onHover={setHoverCatIdx}
             privacy={privacy}
+            budgets={finance.budgets}
           />
           <ChartCard
             title="Ingresos vs Egresos"
@@ -213,6 +217,17 @@ const App = () => {
         <span className="fa-fab-label">Agregar</span>
       </button>
 
+      {transferOpen && (
+        <TransferModal
+          accounts={accounts}
+          onClose={() => setTransferOpen(false)}
+          onSave={(fromId, toId, amount, date, note) => {
+            finance.insertTransfer(fromId, toId, amount, date, note);
+            setTransferOpen(false);
+          }}
+        />
+      )}
+
       {addAccountOpen && (
         <AddAccountModal
           onClose={() => setAddAccountOpen(false)}
@@ -271,6 +286,9 @@ const App = () => {
         onUpdateName={async (name) => {
           await supabase.auth.updateUser({ data: { full_name: name } });
         }}
+        budgets={finance.budgets}
+        onSetBudget={finance.setBudget}
+        onRemoveBudget={finance.removeBudget}
       />
     </div>
   );
