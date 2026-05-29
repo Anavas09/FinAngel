@@ -50,7 +50,12 @@ const App = () => {
     document.documentElement.style.setProperty('--accent', accent);
   }, [accent]);
 
-  const finance = useFinanceData(session ?? null, showToast, { ARS: 1, USD: tweaks.fxUSD, USDT: tweaks.fxUSDT });
+  const fxRates = useMemo(
+    () => ({ ARS: 1, USD: tweaks.fxUSD, USDT: tweaks.fxUSDT } as const),
+    [tweaks.fxUSD, tweaks.fxUSDT],
+  );
+
+  const finance = useFinanceData(session ?? null, showToast, fxRates);
 
   const { mascotMood, mascotLine } = useMascot(finance.monthNet, finance.flowData[0].value, personality);
 

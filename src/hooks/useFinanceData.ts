@@ -1,46 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import {
-  fetchAccounts, fetchTransactions, seedUserData,
+  fetchAccounts, fetchTransactions, fetchBudgets, seedUserData, clearUserData,
   insertAccount, insertTransaction, updateTransaction, deleteTransactionById,
   updateAccountBalance, updateAccountVisibility, deleteAccountById,
-  fetchBudgets, upsertBudget, deleteBudget, clearUserData,
+  upsertBudget, deleteBudget,
 } from '../lib/db';
+import { autoGenerateRecurring } from '../lib/finance/recurring';
+import { catById } from '../data/constants';
 import type { Account, Budget, ChartDataItem, Currency, Transaction, TransactionInput } from '../types';
 
-const isoWeekKey = (d: Date) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
-};
-
-const autoGenerateRecurring = (txs: Transaction[], now: Date): Transaction[] => {
-  const generated: Transaction[] = [];
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const currentWeek = isoWeekKey(now);
-  const today = now.toISOString().slice(0, 10);
-
-  txs.filter(t => t.recurring).forEach((t, i) => {
-    const period = t.recurring === 'monthly' ? currentMonth : currentWeek;
-    const txPeriod = t.recurring === 'monthly' ? t.date.slice(0, 7) : isoWeekKey(new Date(t.date));
-    if (txPeriod === period) return;
-    const alreadyExists = txs.some(
-      x => !x.recurring && (t.recurring === 'monthly' ? x.date.startsWith(currentMonth) : isoWeekKey(new Date(x.date)) === currentWeek)
-           && x.note === t.note && x.accountId === t.accountId && x.amount === t.amount
-    );
-    if (alreadyExists) return;
-    generated.push({ id: `t_rec_${Date.now()}_${i}`, date: today, accountId: t.accountId, categoryId: t.categoryId, amount: t.amount, note: t.note });
-  });
-  return generated;
-};
-
-export const useFinanceData = (session: Session | null, showToast: (msg: string) => void, fxRates: Record<Currency, number>) => {
-  const [accounts, setAccounts] = useState<Account[]>([]);
+export const useFinanceData = (
+  session: Session | null,
+  showToast: (msg: string) => void,
+  fxRates: Record<Currency, number>,
+) => {
+  const [accounts, setAccounts]         = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [budgets, setBudgets]           = useState<Budget[]>([]);
+  const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
     if (!session) return;
@@ -92,7 +70,7 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
   };
 
   const deleteAccount = (id: string) => {
-    const prevAccounts = accounts;
+    const prevAccounts     = accounts;
     const prevTransactions = transactions;
     setAccounts(prev => prev.filter(a => a.id !== id));
     setTransactions(prev => prev.filter(t => t.accountId !== id));
@@ -103,6 +81,8 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     });
     showToast('Cuenta eliminada');
   };
+
+  // --- Presupuestos ---
 
   const setBudget = (categoryId: string, amount: number) => {
     const existing = budgets.find(b => b.categoryId === categoryId);
@@ -122,11 +102,13 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     });
   };
 
+  // --- Transferencias ---
+
   const insertTransfer = (fromId: string, toId: string, amount: number, date: string, note: string) => {
     const id1 = 't' + Date.now();
     const id2 = 't' + (Date.now() + 1);
     const txOut: Transaction = { id: id1, date, accountId: fromId, categoryId: 'transfer', amount: -amount, note };
-    const txIn: Transaction  = { id: id2, date, accountId: toId,   categoryId: 'transfer', amount:  amount, note };
+    const txIn:  Transaction = { id: id2, date, accountId: toId,   categoryId: 'transfer', amount:  amount, note };
     const newAccounts = accounts.map(a => {
       if (a.id === fromId) return { ...a, balance: a.balance - amount };
       if (a.id === toId)   return { ...a, balance: a.balance + amount };
@@ -136,13 +118,11 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     const prevTransactions = transactions;
     setTransactions(prev => [txIn, txOut, ...prev]);
     setAccounts(newAccounts);
-    const fromBalance = newAccounts.find(a => a.id === fromId)!.balance;
-    const toBalance   = newAccounts.find(a => a.id === toId)!.balance;
     Promise.all([
       insertTransaction(txOut, session!.user.id),
       insertTransaction(txIn,  session!.user.id),
-      updateAccountBalance(fromId, fromBalance),
-      updateAccountBalance(toId,   toBalance),
+      updateAccountBalance(fromId, newAccounts.find(a => a.id === fromId)!.balance),
+      updateAccountBalance(toId,   newAccounts.find(a => a.id === toId)!.balance),
     ]).catch(() => {
       setTransactions(prevTransactions);
       setAccounts(prevAccounts);
@@ -156,17 +136,16 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
   const upsertTx = (tx: TransactionInput) => {
     const existing = tx.id ? transactions.find(t => t.id === tx.id) : undefined;
     if (existing) {
-      const updated = tx as Transaction;
-      const delta = updated.amount - existing.amount;
+      const updated    = tx as Transaction;
+      const delta      = updated.amount - existing.amount;
       const newAccounts = accounts.map(a =>
         a.id === updated.accountId ? { ...a, balance: a.balance + delta } : a
       );
       setTransactions(prev => prev.map(t => t.id === tx.id ? updated : t));
       setAccounts(newAccounts);
-      const newBalance = newAccounts.find(a => a.id === updated.accountId)!.balance;
       Promise.all([
         updateTransaction(updated),
-        updateAccountBalance(updated.accountId, newBalance),
+        updateAccountBalance(updated.accountId, newAccounts.find(a => a.id === updated.accountId)!.balance),
       ]).catch(() => {
         setTransactions(transactions);
         setAccounts(accounts);
@@ -174,16 +153,15 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
       });
       showToast('Movimiento actualizado');
     } else {
-      const newTx: Transaction = { ...tx, id: 't' + Date.now() };
+      const newTx       = { ...tx, id: 't' + Date.now() } as Transaction;
       const newAccounts = accounts.map(a =>
         a.id === newTx.accountId ? { ...a, balance: a.balance + newTx.amount } : a
       );
       setTransactions(prev => [newTx, ...prev]);
       setAccounts(newAccounts);
-      const newBalance = newAccounts.find(a => a.id === newTx.accountId)!.balance;
       Promise.all([
         insertTransaction(newTx, session!.user.id),
-        updateAccountBalance(newTx.accountId, newBalance),
+        updateAccountBalance(newTx.accountId, newAccounts.find(a => a.id === newTx.accountId)!.balance),
       ]).catch(() => {
         setTransactions(transactions);
         setAccounts(accounts);
@@ -196,17 +174,16 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
   const deleteTx = (id: string): (() => void) => {
     const tx = transactions.find(t => t.id === id);
     if (!tx) return () => {};
-    const newAccounts = accounts.map(a =>
+    const newAccounts      = accounts.map(a =>
       a.id === tx.accountId ? { ...a, balance: a.balance - tx.amount } : a
     );
     const prevTransactions = transactions;
-    const prevAccounts = accounts;
+    const prevAccounts     = accounts;
     setTransactions(prev => prev.filter(t => t.id !== id));
     setAccounts(newAccounts);
-    const newBalance = newAccounts.find(a => a.id === tx.accountId)!.balance;
     Promise.all([
       deleteTransactionById(id),
-      updateAccountBalance(tx.accountId, newBalance),
+      updateAccountBalance(tx.accountId, newAccounts.find(a => a.id === tx.accountId)!.balance),
     ]).catch(() => {
       setTransactions(prevTransactions);
       setAccounts(prevAccounts);
@@ -215,10 +192,9 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     return () => {
       setTransactions(prevTransactions);
       setAccounts(prevAccounts);
-      const restoredBalance = prevAccounts.find(a => a.id === tx.accountId)!.balance;
       Promise.all([
         insertTransaction(tx, session!.user.id),
-        updateAccountBalance(tx.accountId, restoredBalance),
+        updateAccountBalance(tx.accountId, prevAccounts.find(a => a.id === tx.accountId)!.balance),
       ]).catch(() => {
         setTransactions(prev => prev.filter(t => t.id !== id));
         setAccounts(newAccounts);
@@ -249,7 +225,7 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
 
   // --- Valores derivados ---
 
-  const visibleAccounts = accounts.filter(a => a.visible);
+  const visibleAccounts = useMemo(() => accounts.filter(a => a.visible), [accounts]);
 
   const totalsByCcy = useMemo<Record<Currency, number>>(() => {
     const out: Record<Currency, number> = { ARS: 0, USD: 0, USDT: 0 };
@@ -259,12 +235,12 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
 
   const totalInARS = useMemo(
     () => visibleAccounts.reduce((s, a) => s + a.balance * (fxRates[a.currency] ?? 0), 0),
-    [visibleAccounts]
+    [visibleAccounts, fxRates],
   );
 
   const thisMonth = useMemo(() => {
     const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     return transactions.filter(
       t => t.date.startsWith(ym) && accounts.find(a => a.id === t.accountId)?.visible
     );
@@ -275,31 +251,20 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
     thisMonth.forEach(t => {
       if (t.amount >= 0) return;
       const a = accounts.find(x => x.id === t.accountId);
-      const ars = Math.abs(t.amount) * (a ? fxRates[a.currency] : 0);
-      byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + ars;
+      byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + Math.abs(t.amount) * (a ? fxRates[a.currency] : 0);
     });
-    const catMap: Record<string, { label: string; color: string; icon: string }> = {
-      comida:          { label: 'Comida',          color: '#F26B5E', icon: '🛒' },
-      vivienda:        { label: 'Vivienda',         color: '#7EC4F2', icon: '🏠' },
-      servicios:       { label: 'Servicios',        color: '#F2C94C', icon: '💡' },
-      salud:           { label: 'Salud',            color: '#5BB890', icon: '🩺' },
-      entretenimiento: { label: 'Entretenimiento',  color: '#D4C5F9', icon: '🎬' },
-      ahorro:          { label: 'Ahorro',           color: '#F49B8A', icon: '🐷' },
-      ingreso:         { label: 'Ingreso',          color: '#5BB890', icon: '💰' },
-      otros:           { label: 'Otros',            color: '#B8B0A0', icon: '✨' },
-    };
     return Object.entries(byCat)
       .map(([id, value]) => {
-        const cat = catMap[id] ?? { label: id, color: '#B8B0A0', icon: '✨' };
-        return { id, value, ...cat };
+        const { label, color, icon } = catById(id);
+        return { id, value, label, color, icon };
       })
       .sort((a, b) => b.value - a.value);
-  }, [thisMonth, accounts]);
+  }, [thisMonth, accounts, fxRates]);
 
   const flowData = useMemo<ChartDataItem[]>(() => {
     let inc = 0, exp = 0;
     thisMonth.forEach(t => {
-      const a = accounts.find(x => x.id === t.accountId);
+      const a   = accounts.find(x => x.id === t.accountId);
       const ars = t.amount * (a ? fxRates[a.currency] : 0);
       if (ars >= 0) inc += ars; else exp += Math.abs(ars);
     });
@@ -307,7 +272,7 @@ export const useFinanceData = (session: Session | null, showToast: (msg: string)
       { id: 'inc', label: 'Ingresos', value: inc, color: '#5BB890', icon: '⬆' },
       { id: 'exp', label: 'Egresos',  value: exp, color: '#F26B5E', icon: '⬇' },
     ];
-  }, [thisMonth, accounts]);
+  }, [thisMonth, accounts, fxRates]);
 
   const monthNet = flowData[0].value - flowData[1].value;
 
