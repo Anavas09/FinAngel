@@ -16,6 +16,12 @@ dist-ssr
 !.env.example
 !.env.*.example
 
+# E2E auth state, test secrets and generated reports
+e2e/.auth/
+.env.test
+playwright-report/
+test-results/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

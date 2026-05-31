@@ -12,19 +12,24 @@ const AddTransactionModal = lazy(() => import('./components/transactions/AddTran
 const TransferModal        = lazy(() => import('./components/transactions/TransferModal').then(m => ({ default: m.TransferModal })));
 const AddAccountModal      = lazy(() => import('./components/accounts/AddAccountModal').then(m => ({ default: m.AddAccountModal })));
 const ExportModal          = lazy(() => import('./components/transactions/ExportModal').then(m => ({ default: m.ExportModal })));
+const AddDebtModal         = lazy(() => import('./components/debts/AddDebtModal').then(m => ({ default: m.AddDebtModal })));
 import { AuthScreen } from './components/auth/AuthScreen';
+import { DebtList } from './components/debts/DebtList';
 import { FinAngelMini } from './components/mascot/Mascot';
 import { useTheme } from './hooks/useTheme';
 import { useTweaks } from './hooks/useTweaks';
 import { useFinanceData } from './hooks/useFinanceData';
+import { useDebtsData } from './hooks/useDebtsData';
 import { useModalState } from './hooks/useModalState';
 import { useMascot } from './hooks/useMascot';
+import { useLiveFx } from './hooks/useLiveFx';
 import { supabase } from './lib/supabase';
 import { fmtMoney } from './data/utils';
 
 const App = () => {
   const { theme, setTheme } = useTheme();
   const [tweaks, setTweak] = useTweaks();
+  useLiveFx(setTweak);
   const { privacy, mascotPersonality: personality, layout, primaryAccent: accent } = tweaks;
 
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -32,7 +37,9 @@ const App = () => {
 
   const modals = useModalState();
   const { addOpen, setAddOpen, addAccountOpen, setAddAccountOpen, editingTx, setEditingTx,
-          exportOpen, setExportOpen, transferOpen, setTransferOpen, toast, showToast, clearToast } = modals;
+          exportOpen, setExportOpen, transferOpen, setTransferOpen,
+          debtOpen, setDebtOpen, editingDebt, setEditingDebt,
+          toast, showToast, clearToast } = modals;
 
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
@@ -56,6 +63,7 @@ const App = () => {
   );
 
   const finance = useFinanceData(session ?? null, showToast, fxRates);
+  const debts   = useDebtsData(session ?? null, showToast, fxRates);
 
   const { mascotMood, mascotLine } = useMascot(finance.monthNet, finance.flowData[0].value, personality);
 
@@ -124,6 +132,16 @@ const App = () => {
             </div>
           )}
         </section>
+
+        <DebtList
+          debts={debts.debts}
+          totalDebtARS={debts.totalDebtARS}
+          privacy={privacy}
+          onAdd={() => { setEditingDebt(null); setDebtOpen(true); }}
+          onEdit={d => { setEditingDebt(d); setDebtOpen(true); }}
+          onDelete={id => debts.removeDebt(id)}
+          onMarkPaid={id => debts.markDebtPaid(id)}
+        />
 
         <section className="fa-section fa-charts">
           <ChartCard
@@ -258,6 +276,17 @@ const App = () => {
         )}
       </Suspense>
 
+      <Suspense fallback={null}>
+        {debtOpen && (
+          <AddDebtModal
+            editing={editingDebt}
+            onClose={() => { setDebtOpen(false); setEditingDebt(null); }}
+            onSave={fields => debts.addDebt(fields)}
+            onUpdate={(id, fields) => debts.editDebt(id, fields)}
+          />
+        )}
+      </Suspense>
+
       {toast && (
         <div className="fa-toast">
           <FinAngelMini size={28} mood="happy" />
@@ -277,7 +306,7 @@ const App = () => {
         tweaks={tweaks}
         setTweak={setTweak}
         onLoadSeed={finance.handleLoadSeed}
-        onClearAll={finance.handleClearAll}
+        onClearAll={async () => { await finance.handleClearAll(); debts.clearDebts(); }}
         onSignOut={() => supabase.auth.signOut()}
         userEmail={session.user.email ?? ''}
         userName={userName}

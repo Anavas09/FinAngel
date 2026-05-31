@@ -70,3 +70,19 @@ export interface ChartDataItem {
   color: string;
   icon?: string;
 }
+
+export interface Debt {
+  id: string;
+  name: string;
+  totalAmount: number;
+  remainingAmount: number;
+  currency: Currency;
+  monthlyPayment?: number;
+  dueDate?: string;
+  interestRate?: number;
+  status: 'active' | 'paid';
+  note?: string;
+  createdAt: string;
+}
+
+export type DebtInput = Omit<Debt, 'id' | 'createdAt'> & { id?: string };

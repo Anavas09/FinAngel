@@ -82,6 +82,8 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
             boxShadow: 'var(--shadow-stk-lg, 6px 6px 0 #1D1A18)',
             padding: '20px 22px',
             width: 280,
+            maxHeight: 'calc(100dvh - 120px)',
+            overflowY: 'auto',
             display: 'flex', flexDirection: 'column', gap: 16,
           }}>
             <div style={{ borderBottom: '2px dashed var(--line-soft, #DBCFB4)', paddingBottom: 12 }}>

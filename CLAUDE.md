@@ -9,27 +9,36 @@ npm run dev       # dev server (Vite HMR)
 npm run build     # TypeScript compile + Vite production build
 npm run lint      # ESLint (typescript-eslint)
 npm run preview   # serve the production build locally
+npx playwright test  # run E2E test suite
 ```
-
-No test framework is configured.
 
 ## Architecture
 
 Single-page app with no router. All state lives in `App.tsx` and is passed down as props — no context, no global store.
 
-**State persistence** — two localStorage keys managed via `loadState`/`saveState` (`src/data/utils.ts`):
-- `finangel:v1` — accounts array + transactions array
-- `finangel:tweaks` — user preferences (`Tweaks` type)
+**Authentication** — Supabase email/password auth. `App.tsx` listens to `onAuthStateChange`; renders `AuthScreen` if no session, a spinner while loading. All DB operations are scoped to the authenticated user via RLS.
 
-**Theme system** — three CSS-only themes in `public/themes/{sticker,warm,night}.css`. `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. The active theme key is persisted in localStorage (`finangel:theme`).
+**State persistence** — user preferences only in localStorage via `loadState`/`saveState` (`src/data/utils.ts`):
+- `finangel:tweaks` — `Tweaks` object (privacy, mascotPersonality, layout, primaryAccent, fxUSD, fxUSDT)
+- `finangel:theme` — active theme key
 
-**Tweaks** — `useTweaks` (`src/hooks/useTweaks.ts`) manages the `Tweaks` object: `privacy`, `mascotPersonality`, `layout`, `primaryAccent`. Layout is applied as a CSS class (`fa-layout-{layout}`) on the root div; accent is applied as a CSS custom property (`--accent`) directly on `documentElement`.
+Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched and mutated through `src/lib/db/`.
 
-**Currency** — accounts hold balances in their native currency (ARS / USD / USDT). All totals and charts convert to ARS using the hardcoded rates in `FX_TO_ARS` (`src/data/constants.ts`). There is no live FX feed.
+**Database layer** — `src/lib/db/` exports CRUD functions grouped by domain: `accounts.ts`, `transactions.ts`, `budgets.ts`, `seed.ts`. All calls use the Supabase client from `src/lib/supabase.ts` (env vars `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY`).
 
-**Mascot** — mood is derived from `monthNet` vs income in `App.tsx`, then mapped to a `MascotState` for the SVG and a random copy line from `MASCOT_COPY` (keyed by `MascotPersonality × MascotMood`).
+**Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount, auto-generates recurring transactions, and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`.
 
-**Supabase** — `@supabase/supabase-js` is installed but not yet wired up anywhere in the codebase. All data is currently localStorage-only.
+**Theme system** — three CSS-only themes in `public/themes/{sticker,warm,night}.css`. `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage.
+
+**Tweaks** — `useTweaks` (`src/hooks/useTweaks.ts`) manages the `Tweaks` object. `layout` is applied as `fa-layout-{layout}` on the root div. `fxUSD`/`fxUSDT` override the hardcoded rates in `FX_TO_ARS` at runtime.
+
+**Currency** — accounts hold balances in their native currency (ARS / USD / USDT). All totals and charts convert to ARS using rates from `FX_TO_ARS` (`src/data/constants.ts`), overridable via Tweaks. No live FX feed.
+
+**Recurring transactions** — `src/lib/finance/recurring.ts` auto-generates monthly/weekly transactions on load, guarded by duplicate checks.
+
+**Mascot** — `useMascot` (`src/hooks/useMascot.ts`) derives mood from `monthNet` vs income and returns a `MascotState` + random copy line from `MASCOT_COPY` (keyed by `MascotPersonality × MascotMood`).
+
+**Modal state** — `useModalState` (`src/hooks/useModalState.ts`) centralizes all modal open/close flags plus toast notifications with undo support.
 
 ## Key files
 
@@ -38,8 +47,79 @@ Single-page app with no router. All state lives in `App.tsx` and is passed down 
 | `src/types.ts` | All TypeScript types (single source of truth) |
 | `src/data/constants.ts` | Seed data, FX rates, category map, mascot copy, default tweaks |
 | `src/data/utils.ts` | `fmtMoney`, `fmtDate`, `loadState`, `saveState` |
+| `src/lib/supabase.ts` | Supabase client initialization |
+| `src/lib/db/accounts.ts` | Account CRUD (fetch, insert, update balance/visibility, delete) |
+| `src/lib/db/transactions.ts` | Transaction CRUD (fetch, insert, update, delete) |
+| `src/lib/db/budgets.ts` | Budget CRUD (fetch, upsert, delete) |
+| `src/lib/db/seed.ts` | `seedUserData` / `clearUserData` helpers |
+| `src/lib/finance/recurring.ts` | Auto-generate recurring transactions on load |
+| `src/hooks/useFinanceData.ts` | Core data hook: fetches + derived values + CRUD handlers |
+| `src/hooks/useModalState.ts` | Modal open/close flags + toast with undo |
+| `src/hooks/useMascot.ts` | Mascot mood + copy line derivation |
 | `public/themes/*.css` | Full theme stylesheets (sticker / warm / night) |
+
+## Components
+
+```
+src/components/
+  auth/         AuthScreen          — email/password login & signup
+  dashboard/    GreetingCard        — mascot + mood copy
+                TotalCard           — ARS total, month net, currency breakdown
+                AccountCard         — single account: balance, visibility toggle, delete
+  charts/       ChartCard           — donut chart wrapper (categories or flow)
+                Donut               — SVG donut renderer
+  transactions/ TransactionList     — paginated list with search, period filter, edit/delete
+                AddTransactionModal — add/edit form with recurring field
+                TransferModal       — inter-account transfer (creates two linked txs)
+                ExportModal         — CSV export with sanitization
+  accounts/     AddAccountModal     — new account: kind, currency, color, emoji, balance
+  mascot/       Mascot / MascotMini — SVG mascot, 6 mood states
+  settings/     SettingsPanel       — theme, personality, layout, FX rates, budgets, sign out
+                                    (maxHeight: calc(100dvh-120px) + overflowY: auto para viewport 720px)
+  layout/       TopBar              — logo, theme switcher, export button
+  ui/           Toggle / EyeToggle  — reusable toggle primitives
+```
+
+## Testing
+
+E2E suite with Playwright (`@playwright/test`). Run with `npx playwright test`. No unit/integration test framework is configured.
+
+### E2E suite structure
+
+```
+playwright.config.ts            — workers: 1, fullyParallel: false, globalSetup, webServer Vite
+.env.test                       — TEST_EMAIL, TEST_PASSWORD (gitignored)
+e2e/
+  fixtures/auth.setup.ts        — login único, guarda storageState; verifica expiración real del JWT
+  fixtures/index.ts             — fixtures: app, withSeed (clearAllData + loadSeedData), withClear
+  helpers/app.page.ts           — Page Object Model: accountsSection, getAccounts, getTransactionItems,
+                                  loadSeedData, clearAllData, getToast, getTotalAmount, openExport, etc.
+  helpers/modals.ts             — fillTransactionForm, submitTransactionForm, fillTransferForm, fillAccountForm
+  tests/
+    01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
+    02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
+    03-transactions.spec.ts     — 12 tests: gasto, ingreso, validaciones, editar, eliminar+undo, recurrente, balance
+    04-transfers.spec.ts        — 6 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, nota default
+    05-export.spec.ts           — 8 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF
+    06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
+    07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
+    08-search-filter.spec.ts    — 7 tests: buscar texto/vacío/limpiar, filtro período, "Todos", combinado, buscar por cuenta
+    09-charts.spec.ts           — 8 tests: 2 cards, títulos, leyenda % y valores, Ingresos/Egresos, hover, SVG paths, privacidad
+    10-debts.spec.ts            — 13 tests: estado vacío, crear mínima/completa, max chars, pendiente default, editar, pagar, eliminar+undo, vencida, total ARS
+```
+
+**86 tests en total — 85/86 pasan.** El único fallo conocido: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente en la suite completa por rate-limit de `supabase.auth.updateUser` después de ~40 tests; pasa en aislamiento.
+
+### Key selectors
+- Accounts: `.fa-accounts .fa-account`, name: `.fa-account-name`
+- Transactions: `.fa-tx-list .fa-tx`, note: `.fa-tx-note`
+- Debts: `.fa-debts .fa-debt`, edit: `getByTitle('Editar')`, pay: `getByTitle('Marcar como pagada')`, delete: `getByTitle('Eliminar')`
+- Toast: `.fa-toast` · FAB (app loaded): `.fa-fab`
+- Settings panel: `[style*="z-index: 100"][style*="bottom: 90px"]`
+- Panel rows: `div:has(span:text-is("Label"))` · Search: `getByPlaceholder('Buscar nota o cuenta…')`
 
 ## Pending work (security hardening)
 
-A security plan exists at `plan-seguridad-finangel.md`. Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component, Content Security Policy headers, CSV injection fix in ExportModal, and input validation.
+Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component, Content Security Policy headers, and comprehensive input validation.
+
+Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation.

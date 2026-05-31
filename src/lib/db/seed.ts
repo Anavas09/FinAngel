@@ -24,4 +24,6 @@ export const clearUserData = async (): Promise<void> => {
   // RLS garantiza que solo se borran los datos del usuario actual.
   const { error } = await supabase.from('accounts').delete().neq('id', '');
   if (error) throw error;
+  const { error: debtErr } = await supabase.from('debts').delete().neq('id', '');
+  if (debtErr) throw debtErr;
 };
