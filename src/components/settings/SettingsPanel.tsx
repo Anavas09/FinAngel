@@ -245,59 +245,63 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
               })}
             </div>
 
-            <button
-              onClick={() => { onLoadSeed(); setOpen(false); }}
-              style={{
-                padding: '10px 16px',
-                border: '2px solid var(--line, #1D1A18)',
-                borderRadius: 999,
-                background: 'white',
-                fontWeight: 700, fontSize: 13,
-                cursor: 'pointer',
-                color: 'var(--ink, #1D1A18)',
-                boxShadow: '2px 2px 0 var(--line, #1D1A18)',
-                marginTop: 4,
-              }}
-            >
-              Cargar datos de ejemplo
-            </button>
+            {import.meta.env.DEV && (
+              <>
+                <button
+                  onClick={() => { onLoadSeed(); setOpen(false); }}
+                  style={{
+                    padding: '10px 16px',
+                    border: '2px solid var(--line, #1D1A18)',
+                    borderRadius: 999,
+                    background: 'white',
+                    fontWeight: 700, fontSize: 13,
+                    cursor: 'pointer',
+                    color: 'var(--ink, #1D1A18)',
+                    boxShadow: '2px 2px 0 var(--line, #1D1A18)',
+                    marginTop: 4,
+                  }}
+                >
+                  Cargar datos de ejemplo
+                </button>
 
-            {confirmClear ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#C44A3D', textAlign: 'center' }}>
-                  ¿Borrar todo? Esta acción no se puede deshacer.
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
+                {confirmClear ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#C44A3D', textAlign: 'center' }}>
+                      ¿Borrar todo? Esta acción no se puede deshacer.
+                    </span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setConfirmClear(false)}
+                        style={{ flex: 1, padding: '8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 999, background: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => { onClearAll(); setConfirmClear(false); setOpen(false); }}
+                        style={{ flex: 1, padding: '8px', border: '2px solid #C44A3D', borderRadius: 999, background: '#C44A3D', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: 'white' }}
+                      >
+                        Sí, borrar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <button
-                    onClick={() => setConfirmClear(false)}
-                    style={{ flex: 1, padding: '8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 999, background: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                    onClick={() => setConfirmClear(true)}
+                    style={{
+                      padding: '10px 16px',
+                      border: '2px solid #C44A3D',
+                      borderRadius: 999,
+                      background: 'white',
+                      fontWeight: 700, fontSize: 13,
+                      cursor: 'pointer',
+                      color: '#C44A3D',
+                      boxShadow: '2px 2px 0 #C44A3D',
+                    }}
                   >
-                    Cancelar
+                    Borrar todos los datos
                   </button>
-                  <button
-                    onClick={() => { onClearAll(); setConfirmClear(false); setOpen(false); }}
-                    style={{ flex: 1, padding: '8px', border: '2px solid #C44A3D', borderRadius: 999, background: '#C44A3D', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: 'white' }}
-                  >
-                    Sí, borrar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmClear(true)}
-                style={{
-                  padding: '10px 16px',
-                  border: '2px solid #C44A3D',
-                  borderRadius: 999,
-                  background: 'white',
-                  fontWeight: 700, fontSize: 13,
-                  cursor: 'pointer',
-                  color: '#C44A3D',
-                  boxShadow: '2px 2px 0 #C44A3D',
-                }}
-              >
-                Borrar todos los datos
-              </button>
+                )}
+              </>
             )}
 
             <button

@@ -8,7 +8,10 @@ import {
 } from '../lib/db';
 import { autoGenerateRecurring } from '../lib/finance/recurring';
 import { catById } from '../data/constants';
+import { loadOrder, saveOrder, applyOrder } from '../data/utils';
 import type { Account, Budget, ChartDataItem, Currency, Transaction, TransactionInput } from '../types';
+
+const ACCOUNT_ORDER_KEY = 'finangel:account-order';
 
 export const useFinanceData = (
   session: Session | null,
@@ -27,13 +30,13 @@ export const useFinanceData = (
       .then(([accs, txs, bgs]) => {
         const generated = autoGenerateRecurring(txs, new Date());
         if (generated.length === 0) {
-          setAccounts(accs); setTransactions(txs); setBudgets(bgs);
+          setAccounts(applyOrder(accs, loadOrder(ACCOUNT_ORDER_KEY))); setTransactions(txs); setBudgets(bgs);
           return;
         }
-        const updatedAccounts = accs.map(a => {
+        const updatedAccounts = applyOrder(accs.map(a => {
           const delta = generated.filter(t => t.accountId === a.id).reduce((s, t) => s + t.amount, 0);
           return delta !== 0 ? { ...a, balance: a.balance + delta } : a;
-        });
+        }), loadOrder(ACCOUNT_ORDER_KEY));
         setAccounts(updatedAccounts);
         setTransactions([...generated, ...txs]);
         setBudgets(bgs);
@@ -203,6 +206,11 @@ export const useFinanceData = (
     };
   };
 
+  const reorderAccounts = (ids: string[]) => {
+    saveOrder(ACCOUNT_ORDER_KEY, ids);
+    setAccounts(prev => applyOrder(prev, ids));
+  };
+
   // --- Gestión de datos ---
 
   const handleLoadSeed = async () => {
@@ -280,7 +288,7 @@ export const useFinanceData = (
     accounts, transactions, loading,
     visibleAccounts, totalsByCcy, totalInARS,
     categoryData, flowData, monthNet,
-    toggleAccount, addAccount, deleteAccount, insertTransfer,
+    toggleAccount, addAccount, deleteAccount, reorderAccounts, insertTransfer,
     budgets, setBudget, removeBudget,
     upsertTx, deleteTx,
     handleLoadSeed, handleClearAll,

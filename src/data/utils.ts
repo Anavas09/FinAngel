@@ -34,3 +34,19 @@ export const loadState = <T>(key: string): T | null => {
 export const saveState = (key: string, value: unknown): void => {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 };
+
+export const loadOrder = (key: string): string[] => {
+  try { return JSON.parse(localStorage.getItem(key) ?? '[]') as string[]; } catch (_e) { return []; }
+};
+
+export const saveOrder = (key: string, ids: string[]): void => {
+  try { localStorage.setItem(key, JSON.stringify(ids)); } catch (_e) { /* storage unavailable */ }
+};
+
+export const applyOrder = <T extends { id: string }>(items: T[], savedOrder: string[]): T[] => {
+  if (!savedOrder.length) return items;
+  const map = new Map(items.map(i => [i.id, i]));
+  const ordered = savedOrder.flatMap(id => (map.has(id) ? [map.get(id)!] : []));
+  const rest = items.filter(i => !savedOrder.includes(i.id));
+  return [...ordered, ...rest];
+};

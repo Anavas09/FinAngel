@@ -106,9 +106,36 @@ e2e/
     08-search-filter.spec.ts    — 7 tests: buscar texto/vacío/limpiar, filtro período, "Todos", combinado, buscar por cuenta
     09-charts.spec.ts           — 8 tests: 2 cards, títulos, leyenda % y valores, Ingresos/Egresos, hover, SVG paths, privacidad
     10-debts.spec.ts            — 13 tests: estado vacío, crear mínima/completa, max chars, pendiente default, editar, pagar, eliminar+undo, vencida, total ARS
+    11-render-stability.spec.ts — 8 tests: diagnóstico de parpadeos al cambiar de pestaña (baseline requests, spinner re-aparece, re-fetch post-carga, FX mount-only, total estable, MutationObserver, timing)
+    12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
 ```
 
-**86 tests en total — 85/86 pasan.** El único fallo conocido: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente en la suite completa por rate-limit de `supabase.auth.updateUser` después de ~40 tests; pasa en aislamiento.
+**101 tests en total — 85/86 pasan** en specs 01-10. El único fallo conocido: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente en la suite completa por rate-limit de `supabase.auth.updateUser` después de ~40 tests; pasa en aislamiento.
+
+**Tests 2 y 3 de `12-fx-dolarapi.spec.ts` fallarán** mientras el bug de sincronización FX esté activo (ver sección abajo); pasarán una vez aplicado el fix.
+
+### Bug documentado: inputs FX no se sincronizan con el fetch de dolarapi
+
+`SettingsPanel` inicializa `fxUSDInput` / `fxUSDTInput` con `useState(String(tweaks.fxUSD))`. Cuando `useLiveFx` resuelve el fetch y llama `setTweak('fxUSD', data.venta)`, los tweaks se actualizan pero el estado local del panel no, porque `useState` no reacciona a cambios de prop posteriores al mount.
+
+**Causa raíz:** `src/components/settings/SettingsPanel.tsx:36-37` — no existe `useEffect` equivalente al de `budgetInputs` (líneas 42-44) para los inputs de FX.
+
+**Fix pendiente:**
+```tsx
+useEffect(() => {
+  setFxUSDInput(String(tweaks.fxUSD));
+  setFxUSDTInput(String(tweaks.fxUSDT));
+}, [tweaks.fxUSD, tweaks.fxUSDT]);
+```
+Los tests 2 y 3 de `12-fx-dolarapi.spec.ts` confirman este bug y pasarán una vez aplicado el fix.
+
+### Bug documentado: re-fetch al cambiar de pestaña
+
+Supabase refresca el token JWT cuando `visibilityState` vuelve a `visible` → dispara `onAuthStateChange` con nuevo objeto `Session` → `useFinanceData` y `useDebtsData` tienen `[session]` en su `useEffect`, lo que re-ejecuta todos los fetches y muestra el spinner nuevamente.
+
+**Causa raíz:** `src/hooks/useFinanceData.ts:51` y `src/hooks/useDebtsData.ts:21` — la dependencia debería ser `session?.user.id` (string estable), no `session` (objeto nuevo en cada refresh).
+
+**Fix pendiente:** cambiar `[session]` → `[session?.user.id]` en ambos hooks. Los tests 3 y 4 de `11-render-stability.spec.ts` fallarán mientras el bug esté activo y pasarán una vez corregido.
 
 ### Key selectors
 - Accounts: `.fa-accounts .fa-account`, name: `.fa-account-name`

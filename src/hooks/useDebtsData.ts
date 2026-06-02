@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { fetchDebts, insertDebt, updateDebt, deleteDebtById } from '../lib/db';
+import { loadOrder, saveOrder, applyOrder } from '../data/utils';
 import type { Currency, Debt, DebtInput } from '../types';
+
+const DEBT_ORDER_KEY = 'finangel:debt-order';
 
 export const useDebtsData = (
   session: Session | null,
@@ -12,7 +15,9 @@ export const useDebtsData = (
 
   useEffect(() => {
     if (!session) return;
-    fetchDebts().then(setDebts).catch(() => showToast('Error al cargar deudas'));
+    fetchDebts()
+      .then(ds => setDebts(applyOrder(ds, loadOrder(DEBT_ORDER_KEY))))
+      .catch(() => showToast('Error al cargar deudas'));
   }, [session]);
 
   const addDebt = (fields: Omit<DebtInput, 'id'>) => {
@@ -69,7 +74,12 @@ export const useDebtsData = (
     [debts, fxRates],
   );
 
+  const reorderDebts = (ids: string[]) => {
+    saveOrder(DEBT_ORDER_KEY, ids);
+    setDebts(prev => applyOrder(prev, ids));
+  };
+
   const clearDebts = () => setDebts([]);
 
-  return { debts, addDebt, editDebt, removeDebt, markDebtPaid, totalDebtARS, clearDebts };
+  return { debts, addDebt, editDebt, removeDebt, markDebtPaid, totalDebtARS, clearDebts, reorderDebts };
 };

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Toggle } from '../ui/Toggle';
 import { fmtMoney } from '../../data/utils';
 import type { Account } from '../../types';
@@ -12,12 +14,29 @@ interface AccountCardProps {
 
 export const AccountCard = ({ account, onToggle, privacy, onDelete }: AccountCardProps) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: account.id });
 
   return (
     <div
+      ref={setNodeRef}
       className={`fa-account ${account.visible ? '' : 'fa-account-off'}`}
-      style={{ '--swatch': account.color } as React.CSSProperties}
+      style={{
+        '--swatch': account.color,
+        ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: 'relative',
+      } as React.CSSProperties}
     >
+      <button
+        className="fa-drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="Arrastrar para reordenar"
+        tabIndex={-1}
+      >
+        ⠿
+      </button>
       <div className="fa-account-head">
         <div className="fa-account-emoji">{account.emoji}</div>
         <Toggle checked={account.visible} onChange={onToggle} label={`Mostrar ${account.name}`} />

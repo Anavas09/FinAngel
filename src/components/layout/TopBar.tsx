@@ -17,7 +17,19 @@ export const TopBar = ({ onExport, theme, setTheme }: TopBarProps) => {
       <div className="fa-brand">
         <FinAngelMini size={36} mood="happy" />
         <div className="fa-brand-text">
-          <span className="fa-brand-name">FinAngel</span>
+          <span className="fa-brand-name">
+            FinAngel
+            {import.meta.env.DEV && (
+              <span style={{
+                marginLeft: 8,
+                fontSize: 10, fontWeight: 800, letterSpacing: '0.05em',
+                background: '#F2C94C', color: '#1D1A18',
+                border: '2px solid #1D1A18',
+                borderRadius: 6, padding: '1px 6px',
+                verticalAlign: 'middle',
+              }}>DEV</span>
+            )}
+          </span>
           <span className="fa-brand-tag">Tus finanzas, con onda</span>
         </div>
       </div>

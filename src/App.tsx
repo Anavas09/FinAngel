@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { TopBar } from './components/layout/TopBar';
 import { GreetingCard } from './components/dashboard/GreetingCard';
 import { TotalCard } from './components/dashboard/TotalCard';
@@ -65,6 +68,11 @@ const App = () => {
   const finance = useFinanceData(session ?? null, showToast, fxRates);
   const debts   = useDebtsData(session ?? null, showToast, fxRates);
 
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
   const { mascotMood, mascotLine } = useMascot(finance.monthNet, finance.flowData[0].value, personality);
 
   const txMonths = useMemo(() => {
@@ -125,11 +133,26 @@ const App = () => {
               </button>
             </div>
           ) : (
-            <div className="fa-accounts">
-              {accounts.map(a => (
-                <AccountCard key={a.id} account={a} onToggle={() => finance.toggleAccount(a.id)} privacy={privacy} onDelete={() => finance.deleteAccount(a.id)} />
-              ))}
-            </div>
+            <DndContext
+              sensors={dndSensors}
+              onDragEnd={(e: DragEndEvent) => {
+                const { active, over } = e;
+                if (over && active.id !== over.id) {
+                  const ids = accounts.map(a => a.id);
+                  const from = ids.indexOf(active.id as string);
+                  const to   = ids.indexOf(over.id as string);
+                  finance.reorderAccounts(arrayMove(ids, from, to));
+                }
+              }}
+            >
+              <SortableContext items={accounts.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                <div className="fa-accounts">
+                  {accounts.map(a => (
+                    <AccountCard key={a.id} account={a} onToggle={() => finance.toggleAccount(a.id)} privacy={privacy} onDelete={() => finance.deleteAccount(a.id)} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </section>
 
@@ -141,6 +164,7 @@ const App = () => {
           onEdit={d => { setEditingDebt(d); setDebtOpen(true); }}
           onDelete={id => debts.removeDebt(id)}
           onMarkPaid={id => debts.markDebtPaid(id)}
+          onReorder={debts.reorderDebts}
         />
 
         <section className="fa-section fa-charts">
