@@ -5,6 +5,7 @@ export const THEMES: Record<ThemeKey, ThemeConfig> = {
   sticker: { file: '/themes/sticker.css', label: 'Sticker Pack', emoji: '🎨' },
   warm:    { file: '/themes/warm.css',    label: 'Cálido',       emoji: '☀️' },
   night:   { file: '/themes/night.css',   label: 'Noche',        emoji: '🌙' },
+  pastel:  { file: '/themes/pastel.css',  label: 'Pastel',       emoji: '🌸' },
 };
 
 const THEME_KEY = 'finangel:theme';

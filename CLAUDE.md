@@ -28,7 +28,7 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 
 **Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount, auto-generates recurring transactions, and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`.
 
-**Theme system** — three CSS-only themes in `public/themes/{sticker,warm,night}.css`. `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage.
+**Theme system** — four CSS-only themes in `public/themes/{sticker,warm,night,pastel}.css`. `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage. `ThemeKey = 'sticker' | 'warm' | 'night' | 'pastel'`.
 
 **Tweaks** — `useTweaks` (`src/hooks/useTweaks.ts`) manages the `Tweaks` object. `layout` is applied as `fa-layout-{layout}` on the root div. `fxUSD`/`fxUSDT` override the hardcoded rates in `FX_TO_ARS` at runtime.
 
@@ -56,7 +56,7 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 | `src/hooks/useFinanceData.ts` | Core data hook: fetches + derived values + CRUD handlers |
 | `src/hooks/useModalState.ts` | Modal open/close flags + toast with undo |
 | `src/hooks/useMascot.ts` | Mascot mood + copy line derivation |
-| `public/themes/*.css` | Full theme stylesheets (sticker / warm / night) |
+| `public/themes/*.css` | Full theme stylesheets (sticker / warm / night / pastel) |
 
 ## Components
 
@@ -120,6 +120,6 @@ e2e/
 
 ## Pending work (security hardening)
 
-Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component, Content Security Policy headers, and comprehensive input validation.
+Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component.
 
-Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation.
+Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation, Content Security Policy headers in `index.html`, comprehensive input validation (monto ≤ 12 dígitos, nota ≤ 200 chars).

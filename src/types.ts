@@ -39,7 +39,7 @@ export type MascotPersonality = 'motivadora' | 'sarcastica' | 'chill';
 export type MascotMood = 'great' | 'ok' | 'warn';
 export type MascotState = 'happy' | 'celebrating' | 'worried' | 'sleepy' | 'love' | 'chill';
 
-export type ThemeKey = 'sticker' | 'warm' | 'night';
+export type ThemeKey = 'sticker' | 'warm' | 'night' | 'pastel';
 export interface ThemeConfig {
   file: string;
   label: string;
