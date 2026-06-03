@@ -40,6 +40,11 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
   );
 
   useEffect(() => {
+    setFxUSDInput(String(tweaks.fxUSD));
+    setFxUSDTInput(String(tweaks.fxUSDT));
+  }, [tweaks.fxUSD, tweaks.fxUSDT]);
+
+  useEffect(() => {
     setBudgetInputs(budgets.reduce<Record<string, string>>((acc, b) => ({ ...acc, [b.categoryId]: String(b.amount) }), {}));
   }, [budgets]);
 

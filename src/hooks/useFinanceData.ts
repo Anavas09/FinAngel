@@ -48,7 +48,7 @@ export const useFinanceData = (
         ]).catch(() => { setAccounts(accs); setTransactions(txs); });
       })
       .finally(() => setLoading(false));
-  }, [session]);
+  }, [session?.user.id]);
 
   // --- Cuentas ---
 

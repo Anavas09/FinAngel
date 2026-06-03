@@ -18,7 +18,7 @@ export const useDebtsData = (
     fetchDebts()
       .then(ds => setDebts(applyOrder(ds, loadOrder(DEBT_ORDER_KEY))))
       .catch(() => showToast('Error al cargar deudas'));
-  }, [session]);
+  }, [session?.user.id]);
 
   const addDebt = (fields: Omit<DebtInput, 'id'>) => {
     const newDebt: Debt = {
