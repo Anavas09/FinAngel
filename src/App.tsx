@@ -30,7 +30,7 @@ import { supabase } from './lib/supabase';
 import { fmtMoney } from './data/utils';
 
 const App = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, selectedTheme, isAutoMode } = useTheme();
   const [tweaks, setTweak] = useTweaks();
   useLiveFx(setTweak);
   const { privacy, mascotPersonality: personality, layout, primaryAccent: accent } = tweaks;
@@ -101,7 +101,7 @@ const App = () => {
 
   return (
     <div className={`fa-app fa-layout-${layout}`}>
-      <TopBar onExport={() => setExportOpen(true)} theme={theme} setTheme={setTheme} />
+      <TopBar onExport={() => setExportOpen(true)} theme={theme} setTheme={setTheme} selectedTheme={selectedTheme} isAutoMode={isAutoMode} />
 
       <main className="fa-main">
         <GreetingCard mood={mascotMood} line={mascotLine} layout={layout} userName={userName} />

@@ -3,13 +3,17 @@ import { FinAngelMini } from '../mascot/Mascot';
 import { THEMES } from '../../hooks/useTheme';
 import type { ThemeKey } from '../../types';
 
+const AUTO_THEMES = new Set<ThemeKey>(['night', 'pastel']);
+
 interface TopBarProps {
   onExport: () => void;
   theme: ThemeKey;
+  selectedTheme: ThemeKey;
   setTheme: (t: ThemeKey) => void;
+  isAutoMode: boolean;
 }
 
-export const TopBar = ({ onExport, theme, setTheme }: TopBarProps) => {
+export const TopBar = ({ onExport, theme, selectedTheme, setTheme, isAutoMode }: TopBarProps) => {
   const [themeOpen, setThemeOpen] = useState(false);
 
   return (
@@ -42,8 +46,8 @@ export const TopBar = ({ onExport, theme, setTheme }: TopBarProps) => {
             title="Cambiar tema"
             aria-label="Cambiar tema"
           >
-            <span>{THEMES[theme].emoji}</span>
-            <span>{THEMES[theme].label}</span>
+            <span>{isAutoMode ? '🌓' : THEMES[theme].emoji}</span>
+            <span>{isAutoMode ? 'Auto' : THEMES[theme].label}</span>
           </button>
 
           {themeOpen && (
@@ -58,26 +62,45 @@ export const TopBar = ({ onExport, theme, setTheme }: TopBarProps) => {
                 background: 'var(--bg-elev, #fff)', border: '2px solid var(--line, #1D1A18)',
                 borderRadius: 18, padding: 8,
                 boxShadow: 'var(--shadow-stk, 4px 4px 0 #1D1A18)',
-                minWidth: 160,
+                minWidth: 180,
               }}>
-                {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, { label, emoji }]) => (
-                  <button
-                    key={key}
-                    onClick={() => { setTheme(key); setThemeOpen(false); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 14px', borderRadius: 12,
-                      border: key === theme ? '2px solid var(--line, #1D1A18)' : '2px solid transparent',
-                      background: key === theme ? 'var(--bg-warm, #FFE0B5)' : 'transparent',
-                      fontWeight: 700, fontSize: 14, cursor: 'pointer',
-                      color: 'var(--ink, #1D1A18)',
-                    }}
-                  >
-                    <span style={{ fontSize: 18 }}>{emoji}</span>
-                    <span>{label}</span>
-                    {key === theme && <span style={{ marginLeft: 'auto', fontSize: 12 }}>✓</span>}
-                  </button>
-                ))}
+                {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, { label, emoji }]) => {
+                  const isSelected = key === selectedTheme;
+                  const isActive = key === theme;
+                  const isAuto = AUTO_THEMES.has(key);
+
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setTheme(key); setThemeOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 12,
+                        border: isSelected ? '2px solid var(--line, #1D1A18)' : '2px solid transparent',
+                        background: isSelected ? 'var(--bg-warm, #FFE0B5)' : 'transparent',
+                        fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                        color: 'var(--ink, #1D1A18)',
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>{emoji}</span>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
+                      {isAuto && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, letterSpacing: '0.05em',
+                          background: 'var(--line, #1D1A18)', color: 'var(--bg, #fff)',
+                          borderRadius: 4, padding: '1px 5px',
+                          opacity: 0.65,
+                        }}>AUTO</span>
+                      )}
+                      {isAutoMode && isActive && isAuto && (
+                        <span style={{ fontSize: 11, opacity: 0.55 }}>▶</span>
+                      )}
+                      {!isAutoMode && isSelected && (
+                        <span style={{ fontSize: 12 }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
