@@ -255,40 +255,50 @@ input { font-family: inherit; }
   gap: 14px;
 }
 .fa-account {
-  position: relative;
-  padding: 18px 18px 20px;
+  display: flex;
   background: var(--bg-elev);
   border: 1.5px solid var(--line);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-sm);
-  transition: transform 160ms, border-color 160ms;
+  transition: transform 160ms, box-shadow 160ms, border-color 160ms, opacity 160ms;
   overflow: hidden;
 }
-.fa-account::before {
-  content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 5px;
-  background: var(--swatch);
-  border-radius: 999px;
-  box-shadow: 0 0 12px var(--swatch);
-}
 .fa-account:hover { transform: translateY(-2px); border-color: var(--swatch); }
+.fa-account-rail {
+  flex: 0 0 56px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--swatch) 68%, var(--bg-elev)), var(--swatch));
+}
 .fa-account-off { opacity: 0.4; }
 .fa-account-off .fa-account-balance { text-decoration: line-through; text-decoration-color: var(--ink-faded); }
-.fa-account-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.fa-account-content {
+  flex: 1; min-width: 0;
+  position: relative;
+  display: flex; flex-direction: column;
+  padding: 14px 16px 16px;
+}
+.fa-account-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .fa-account-emoji {
-  width: 36px; height: 36px;
+  width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.16);
+  border-radius: 11px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28);
 }
-.fa-account-body { display: flex; flex-direction: column; gap: 2px; padding-left: 8px; }
-.fa-account-name { font-weight: 700; font-size: 15px; color: var(--ink); }
-.fa-account-kind { font-size: 11px; color: var(--ink-soft); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+.fa-account-kind { font-size: 11px; color: var(--ink-soft); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.fa-account-name { font-weight: 700; font-size: 15px; color: var(--ink); margin-top: 3px; }
+.fa-account-balrow { display: flex; align-items: baseline; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
 .fa-account-balance {
   font-family: var(--font-display);
-  font-weight: 700; font-size: 22px;
-  margin-top: 8px; letter-spacing: -0.02em; color: var(--ink);
+  font-weight: 700; font-size: 23px;
+  line-height: 1.1; letter-spacing: -0.02em; color: var(--ink);
+}
+.fa-account-balance.is-neg { color: var(--coral); }
+.fa-account-ccy {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
+  color: var(--ink-soft); background: rgba(255,255,255,0.08);
+  padding: 3px 9px; border-radius: 999px; flex-shrink: 0;
 }
 
 /* Drag handle */

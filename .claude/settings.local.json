@@ -1,7 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\" -Recurse -Name)"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\" -Recurse -Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Force)",
+      "Bash(Select-Object Mode, Name)",
+      "PowerShell(cd \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\"; ls -Force | Where-Object {$_.Name -notmatch '^node_modules'} | Format-Table Mode, Name -AutoSize)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\\\\src\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(npx playwright *)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
 }
