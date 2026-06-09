@@ -13,6 +13,7 @@ interface DebtListProps {
   onEdit: (debt: DebtInput) => void;
   onDelete: (id: string) => void;
   onMarkPaid: (id: string) => void;
+  onPayDebt: (debt: Debt) => void;
   onReorder: (ids: string[]) => void;
 }
 
@@ -40,10 +41,11 @@ interface DebtCardProps {
   onEdit: (debt: DebtInput) => void;
   onDelete: (id: string) => void;
   onMarkPaid: (id: string) => void;
+  onPayDebt: (debt: Debt) => void;
   sortable: boolean;
 }
 
-const DebtCard = ({ debt, privacy, onEdit, onDelete, onMarkPaid, sortable }: DebtCardProps) => {
+const DebtCard = ({ debt, privacy, onEdit, onDelete, onMarkPaid, onPayDebt, sortable }: DebtCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: debt.id, disabled: !sortable });
   const status  = getDebtStatus(debt);
   const paid    = debt.totalAmount > 0 ? Math.min((debt.totalAmount - debt.remainingAmount) / debt.totalAmount, 1) : 1;
@@ -136,6 +138,14 @@ const DebtCard = ({ debt, privacy, onEdit, onDelete, onMarkPaid, sortable }: Deb
               style={{ fontSize: 16 }}
             >✓</button>
           )}
+          {debt.status === 'active' && (
+            <button
+              className="fa-iconbtn fa-iconbtn-ghost"
+              onClick={() => onPayDebt(debt)}
+              title="Registrar pago"
+              style={{ fontSize: 14 }}
+            >💸</button>
+          )}
           <button
             className="fa-iconbtn fa-iconbtn-ghost"
             onClick={() => onEdit({ ...debt })}
@@ -164,7 +174,7 @@ const DebtCard = ({ debt, privacy, onEdit, onDelete, onMarkPaid, sortable }: Deb
   );
 };
 
-export const DebtList = ({ debts, totalDebtARS, privacy, onAdd, onEdit, onDelete, onMarkPaid, onReorder }: DebtListProps) => {
+export const DebtList = ({ debts, totalDebtARS, privacy, onAdd, onEdit, onDelete, onMarkPaid, onPayDebt, onReorder }: DebtListProps) => {
   const activeDebts = debts.filter(d => d.status === 'active');
   const paidDebts   = debts.filter(d => d.status === 'paid');
 
@@ -207,6 +217,7 @@ export const DebtList = ({ debts, totalDebtARS, privacy, onAdd, onEdit, onDelete
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onMarkPaid={onMarkPaid}
+                    onPayDebt={onPayDebt}
                     sortable
                   />
                 ))}
@@ -224,6 +235,7 @@ export const DebtList = ({ debts, totalDebtARS, privacy, onAdd, onEdit, onDelete
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onMarkPaid={onMarkPaid}
+                  onPayDebt={onPayDebt}
                   sortable={false}
                 />
               ))}

@@ -44,6 +44,7 @@ const App = () => {
           debtOpen, setDebtOpen, editingDebt, setEditingDebt,
           toast, showToast, clearToast } = modals;
 
+  const [preselectedDebtId, setPreselectedDebtId] = useState<string | null>(null);
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [txSearch, setTxSearch]             = useState('');
@@ -164,6 +165,7 @@ const App = () => {
           onEdit={d => { setEditingDebt(d); setDebtOpen(true); }}
           onDelete={id => debts.removeDebt(id)}
           onMarkPaid={id => debts.markDebtPaid(id)}
+          onPayDebt={d => { setPreselectedDebtId(d.id); setAddOpen(true); }}
           onReorder={debts.reorderDebts}
         />
 
@@ -276,8 +278,16 @@ const App = () => {
           <AddTransactionModal
             accounts={accounts}
             editing={editingTx}
-            onClose={() => { setAddOpen(false); setEditingTx(null); }}
-            onSave={tx => { finance.upsertTx(tx); setAddOpen(false); setEditingTx(null); }}
+            debts={debts.debts.filter(d => d.status === 'active')}
+            preselectedDebtId={preselectedDebtId ?? undefined}
+            onClose={() => { setAddOpen(false); setEditingTx(null); setPreselectedDebtId(null); }}
+            onSave={(tx, debtId) => {
+              finance.upsertTx(tx);
+              if (debtId) debts.partialPayDebt(debtId, Math.abs(tx.amount));
+              setAddOpen(false);
+              setEditingTx(null);
+              setPreselectedDebtId(null);
+            }}
             onDelete={editingTx?.id ? () => {
               const undo = finance.deleteTx(editingTx.id!);
               setAddOpen(false);

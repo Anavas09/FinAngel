@@ -1,26 +1,44 @@
 import { useState } from 'react';
 import { CATEGORIES } from '../../data/constants';
-import type { Account, Transaction, TransactionInput } from '../../types';
+import { fmtMoney } from '../../data/utils';
+import type { Account, Debt, Transaction, TransactionInput } from '../../types';
 
 interface AddTransactionModalProps {
   accounts: Account[];
   editing: TransactionInput | null;
   onClose: () => void;
-  onSave: (tx: TransactionInput) => void;
+  onSave: (tx: TransactionInput, debtId?: string) => void;
   onDelete: (() => void) | null;
+  debts?: Debt[];
+  preselectedDebtId?: string;
 }
 
-export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete }: AddTransactionModalProps) => {
+export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete, debts, preselectedDebtId }: AddTransactionModalProps) => {
+  const prefilledDebt = !editing ? debts?.find(d => d.id === preselectedDebtId) : undefined;
+
   const [kind, setKind] = useState<'income' | 'expense'>(
     editing ? (editing.amount >= 0 ? 'income' : 'expense') : 'expense'
   );
-  const [amount, setAmount] = useState(editing ? String(Math.abs(editing.amount)) : '');
-  const [accountId, setAccountId] = useState(editing?.accountId ?? accounts[0].id);
-  const [categoryId, setCategoryId] = useState(editing?.categoryId ?? 'comida');
-  const [note, setNote] = useState(editing?.note ?? '');
+  const [amount, setAmount] = useState(
+    editing ? String(Math.abs(editing.amount))
+    : prefilledDebt?.monthlyPayment ? String(prefilledDebt.monthlyPayment)
+    : ''
+  );
+  const defaultAccountId = prefilledDebt
+    ? (accounts.find(a => a.currency === prefilledDebt.currency)?.id ?? accounts[0].id)
+    : accounts[0].id;
+  const [accountId, setAccountId] = useState(editing?.accountId ?? defaultAccountId);
+  const [categoryId, setCategoryId] = useState(editing?.categoryId ?? (prefilledDebt ? 'envio_pago' : 'comida'));
+  const [note, setNote] = useState(editing?.note ?? (prefilledDebt ? `Pago de ${prefilledDebt.name}` : ''));
   const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
   const [amountError, setAmountError] = useState(false);
   const [recurring, setRecurring] = useState<Transaction['recurring'] | ''>(editing?.recurring ?? '');
+  const [debtId, setDebtId] = useState(preselectedDebtId ?? '');
+
+  const selectedAccount = accounts.find(a => a.id === accountId);
+  const matchingDebts = !editing && kind === 'expense' && debts
+    ? debts.filter(d => d.status === 'active' && d.currency === selectedAccount?.currency)
+    : [];
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,19 +48,22 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
-    onSave({
-      id: editing?.id,
-      date,
-      accountId,
-      categoryId: kind === 'income' ? 'ingreso' : categoryId,
-      amount: signed,
-      note: cleanNote,
-      ...(recurring ? { recurring } : {}),
-    });
+    const validDebtId = matchingDebts.some(d => d.id === debtId) ? debtId : undefined;
+    onSave(
+      {
+        id: editing?.id,
+        date,
+        accountId,
+        categoryId: kind === 'income' ? 'ingreso' : categoryId,
+        amount: signed,
+        note: cleanNote,
+        ...(recurring ? { recurring } : {}),
+      },
+      validDebtId,
+    );
   };
 
   const expenseCats = CATEGORIES.filter(c => c.id !== 'ingreso' && c.id !== 'transfer');
-  const selectedAccount = accounts.find(a => a.id === accountId);
 
   return (
     <div className="fa-modal-wrap" onClick={onClose}>
@@ -62,7 +83,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
             <button type="button" data-kind="expense" className={kind === 'expense' ? 'active' : ''} onClick={() => setKind('expense')}>
               <span>↓</span> Gasto
             </button>
-            <button type="button" data-kind="income" className={kind === 'income' ? 'active' : ''} onClick={() => setKind('income')}>
+            <button type="button" data-kind="income" className={kind === 'income' ? 'active' : ''} onClick={() => { setKind('income'); setDebtId(''); }}>
               <span>↑</span> Ingreso
             </button>
           </div>
@@ -118,6 +139,37 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                   </button>
                 ))}
               </div>
+            </label>
+          )}
+
+          {matchingDebts.length > 0 && (
+            <label className="fa-field">
+              <span className="fa-field-label">Aplicar a deuda <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></span>
+              <select
+                className="fa-input"
+                value={debtId}
+                onChange={e => {
+                  const selected = matchingDebts.find(d => d.id === e.target.value);
+                  setDebtId(e.target.value);
+                  if (selected) {
+                    setCategoryId('envio_pago');
+                    if (!note.trim() || note.startsWith('Pago de ')) setNote(`Pago de ${selected.name}`);
+                  }
+                }}
+                style={{ fontSize: 13 }}
+              >
+                <option value="">— Sin deuda —</option>
+                {matchingDebts.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} · pendiente: {fmtMoney(d.remainingAmount, d.currency, false)}
+                  </option>
+                ))}
+              </select>
+              {debtId && (
+                <span style={{ fontSize: 11, opacity: 0.55, marginTop: 4, display: 'block' }}>
+                  El monto se descontará del saldo pendiente de la deuda
+                </span>
+              )}
             </label>
           )}
 

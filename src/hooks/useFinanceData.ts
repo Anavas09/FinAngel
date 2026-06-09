@@ -257,7 +257,7 @@ export const useFinanceData = (
   const categoryData = useMemo<ChartDataItem[]>(() => {
     const byCat: Record<string, number> = {};
     thisMonth.forEach(t => {
-      if (t.amount >= 0) return;
+      if (t.amount >= 0 || t.categoryId === 'transfer') return;
       const a = accounts.find(x => x.id === t.accountId);
       byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + Math.abs(t.amount) * (a ? fxRates[a.currency] : 0);
     });
@@ -272,6 +272,7 @@ export const useFinanceData = (
   const flowData = useMemo<ChartDataItem[]>(() => {
     let inc = 0, exp = 0;
     thisMonth.forEach(t => {
+      if (t.categoryId === 'transfer') return;
       const a   = accounts.find(x => x.id === t.accountId);
       const ars = t.amount * (a ? fxRates[a.currency] : 0);
       if (ars >= 0) inc += ars; else exp += Math.abs(ars);

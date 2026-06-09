@@ -67,6 +67,16 @@ export const useDebtsData = (
     editDebt(id, { status: 'paid', remainingAmount: 0 });
   };
 
+  const partialPayDebt = (id: string, amount: number) => {
+    const debt = debts.find(d => d.id === id);
+    if (!debt) return;
+    const newRemaining = Math.max(0, debt.remainingAmount - Math.abs(amount));
+    editDebt(id, {
+      remainingAmount: newRemaining,
+      ...(newRemaining === 0 ? { status: 'paid' as const } : {}),
+    });
+  };
+
   const totalDebtARS = useMemo(
     () => debts
       .filter(d => d.status === 'active')
@@ -81,5 +91,5 @@ export const useDebtsData = (
 
   const clearDebts = () => setDebts([]);
 
-  return { debts, addDebt, editDebt, removeDebt, markDebtPaid, totalDebtARS, clearDebts, reorderDebts };
+  return { debts, addDebt, editDebt, removeDebt, markDebtPaid, partialPayDebt, totalDebtARS, clearDebts, reorderDebts };
 };

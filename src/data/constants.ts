@@ -11,13 +11,16 @@ export const ACCOUNTS_SEED: AccountSeed[] = [
 export const CATEGORIES: Category[] = [
   { id: 'comida',           label: 'Comida',          color: '#F26B5E', icon: '🛒' },
   { id: 'vivienda',         label: 'Vivienda',        color: '#7EC4F2', icon: '🏠' },
-  { id: 'servicios',        label: 'Servicios',       color: '#F2C94C', icon: '💡' },
+  { id: 'luz_gas',          label: 'Luz / Gas',       color: '#F2C94C', icon: '💡' },
+  { id: 'internet',         label: 'Internet / Tel.', color: '#7DD3FC', icon: '🌐' },
+  { id: 'suscripciones',    label: 'Suscripciones',   color: '#C4B5FD', icon: '📱' },
   { id: 'salud',            label: 'Salud',           color: '#5BB890', icon: '🩺' },
   { id: 'entretenimiento',  label: 'Entretenimiento', color: '#D4C5F9', icon: '🎬' },
   { id: 'ahorro',           label: 'Ahorro',          color: '#F49B8A', icon: '🐷' },
   { id: 'ingreso',          label: 'Ingreso',         color: '#5BB890', icon: '💰' },
   { id: 'otros',            label: 'Otros',           color: '#B8B0A0', icon: '✨' },
   { id: 'transfer',         label: 'Transferencia',   color: '#A78BFA', icon: '↔️' },
+  { id: 'envio_pago',       label: 'Envío / Pago',    color: '#C13B3B', icon: '💸' },
 ];
 
 export const catById = (id: string): Category =>
@@ -37,9 +40,9 @@ export const TRANSACTIONS_SEED: Transaction[] = [
   { id: 't1',  date: '2026-05-20', accountId: 'mp',     categoryId: 'comida',          amount: -8450,   note: 'Súper de la semana' },
   { id: 't2',  date: '2026-05-19', accountId: 'ars',    categoryId: 'vivienda',        amount: -210000, note: 'Alquiler mayo' },
   { id: 't3',  date: '2026-05-18', accountId: 'ars',    categoryId: 'ingreso',         amount: 850000,  note: 'Sueldo' },
-  { id: 't4',  date: '2026-05-17', accountId: 'mp',     categoryId: 'entretenimiento', amount: -4200,   note: 'Netflix + Spotify' },
+  { id: 't4',  date: '2026-05-17', accountId: 'mp',     categoryId: 'suscripciones',   amount: -4200,   note: 'Netflix + Spotify' },
   { id: 't5',  date: '2026-05-16', accountId: 'tc',     categoryId: 'comida',          amount: -12300,  note: 'Cena con amigos' },
-  { id: 't6',  date: '2026-05-15', accountId: 'ars',    categoryId: 'servicios',       amount: -38500,  note: 'Luz + Internet' },
+  { id: 't6',  date: '2026-05-15', accountId: 'ars',    categoryId: 'luz_gas',         amount: -38500,  note: 'Luz' },
   { id: 't7',  date: '2026-05-14', accountId: 'usd',    categoryId: 'ahorro',          amount: 250,     note: 'Compra mensual USD' },
   { id: 't8',  date: '2026-05-12', accountId: 'mp',     categoryId: 'salud',           amount: -6800,   note: 'Farmacia' },
   { id: 't9',  date: '2026-05-10', accountId: 'crypto', categoryId: 'ahorro',          amount: 120,     note: 'DCA USDT' },
