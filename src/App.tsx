@@ -340,6 +340,7 @@ const App = () => {
         budgets={finance.budgets}
         onSetBudget={finance.setBudget}
         onRemoveBudget={finance.removeBudget}
+        categoryData={categoryData}
       />
     </div>
   );

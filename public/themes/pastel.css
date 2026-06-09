@@ -11,14 +11,14 @@
   --bg-warm:     #FFE9D6;
 
   /* Pastel palette */
-  --coral:       #F26B5E;
+  --coral:       #D96060;
   --peach:       #FFD4A8;
   --mint:        #B8E6C9;
   --mint-deep:   #5BB890;
   --sky:         #7EC4F2;
   --sun:         #FFD66B;
   --lavender:    #D4C5F9;
-  --rose:        #F49B8A;
+  --rose:        #E07878;
   --rose-soft:   #F4A8C0;
 
   /* Text */
@@ -610,11 +610,8 @@ input { font-family: inherit; }
   color: var(--ink-soft);
   transition: background 160ms, color 160ms;
 }
-.fa-kind-tabs button.active {
-  background: white;
-  color: var(--ink);
-  box-shadow: var(--shadow-sm);
-}
+.fa-kind-tabs button[data-kind="expense"].active { background: var(--coral); color: white; box-shadow: var(--shadow-sm); }
+.fa-kind-tabs button[data-kind="income"].active { background: var(--mint-deep); color: white; box-shadow: var(--shadow-sm); }
 .fa-kind-tabs button span { margin-right: 4px; }
 
 .fa-field { display: flex; flex-direction: column; gap: 8px; }

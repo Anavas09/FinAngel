@@ -10,7 +10,7 @@
   --bg-soft:     #FFEBD0;
   --bg-warm:     #FFE0B5;
 
-  --coral:       #FF5C4D;
+  --coral:       #E8332A;
   --peach:       #FFB37A;
   --mint:        #82DCAA;
   --mint-deep:   #2D9D6C;
@@ -606,7 +606,8 @@ input { font-family: inherit; }
   font-weight: 800; font-size: 14px; color: var(--ink-soft);
   transition: all 160ms;
 }
-.fa-kind-tabs button.active { background: var(--coral); color: white; }
+.fa-kind-tabs button[data-kind="expense"].active { background: var(--coral); color: white; }
+.fa-kind-tabs button[data-kind="income"].active { background: var(--mint-deep); color: white; }
 .fa-kind-tabs button span { margin-right: 4px; }
 
 .fa-field { display: flex; flex-direction: column; gap: 8px; }

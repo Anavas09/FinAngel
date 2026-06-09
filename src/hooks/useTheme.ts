@@ -1,33 +1,36 @@
 import { useState, useEffect } from 'react';
 import type { ThemeConfig, ThemeKey } from '../types';
 
+type RealThemeKey = Exclude<ThemeKey, 'auto'>;
+
 export const THEMES: Record<ThemeKey, ThemeConfig> = {
   sticker: { file: '/themes/sticker.css', label: 'Sticker Pack', emoji: '🎨' },
   warm:    { file: '/themes/warm.css',    label: 'Cálido',       emoji: '☀️' },
   night:   { file: '/themes/night.css',   label: 'Noche',        emoji: '🌙' },
-  pastel:  { file: '/themes/pastel.css',  label: 'Pastel',       emoji: '🌸' },
+  auto:    { file: '',                    label: 'Auto',         emoji: '🌓' },
 };
 
 const THEME_KEY = 'finangel:theme';
 
 const AUTO_NIGHT_START = 18;
 const AUTO_NIGHT_END   = 6;
-const AUTO_THEMES = new Set<ThemeKey>(['night', 'pastel']);
 
-function getAutoTheme(): ThemeKey {
+function getAutoTheme(): RealThemeKey {
   const h = new Date().getHours();
-  return (h >= AUTO_NIGHT_START || h < AUTO_NIGHT_END) ? 'night' : 'pastel';
+  return (h >= AUTO_NIGHT_START || h < AUTO_NIGHT_END) ? 'night' : 'warm';
 }
 
 export const useTheme = () => {
-  const [storedTheme, setStoredTheme] = useState<ThemeKey>(
-    () => (localStorage.getItem(THEME_KEY) as ThemeKey) || 'sticker'
-  );
+  const [storedTheme, setStoredTheme] = useState<ThemeKey>(() => {
+    const saved = localStorage.getItem(THEME_KEY) as ThemeKey;
+    if (saved === 'pastel') return 'warm';
+    return saved || 'sticker';
+  });
 
-  const [autoTheme, setAutoTheme] = useState<ThemeKey>(getAutoTheme);
+  const [autoTheme, setAutoTheme] = useState<RealThemeKey>(getAutoTheme);
 
-  const isAutoMode = AUTO_THEMES.has(storedTheme);
-  const effectiveTheme = isAutoMode ? autoTheme : storedTheme;
+  const isAutoMode = storedTheme === 'auto';
+  const effectiveTheme: RealThemeKey = isAutoMode ? autoTheme : storedTheme as RealThemeKey;
 
   // Update autoTheme every minute when in auto mode
   useEffect(() => {

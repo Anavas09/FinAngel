@@ -3,8 +3,6 @@ import { FinAngelMini } from '../mascot/Mascot';
 import { THEMES } from '../../hooks/useTheme';
 import type { ThemeKey } from '../../types';
 
-const AUTO_THEMES = new Set<ThemeKey>(['night', 'pastel']);
-
 interface TopBarProps {
   onExport: () => void;
   theme: ThemeKey;
@@ -46,8 +44,8 @@ export const TopBar = ({ onExport, theme, selectedTheme, setTheme, isAutoMode }:
             title="Cambiar tema"
             aria-label="Cambiar tema"
           >
-            <span>{isAutoMode ? '🌓' : THEMES[theme].emoji}</span>
-            <span>{isAutoMode ? 'Auto' : THEMES[theme].label}</span>
+            <span>{isAutoMode ? THEMES.auto.emoji : THEMES[theme].emoji}</span>
+            <span>{isAutoMode ? `Auto (${THEMES[theme].label})` : THEMES[theme].label}</span>
           </button>
 
           {themeOpen && (
@@ -66,9 +64,6 @@ export const TopBar = ({ onExport, theme, selectedTheme, setTheme, isAutoMode }:
               }}>
                 {(Object.entries(THEMES) as [ThemeKey, typeof THEMES[ThemeKey]][]).map(([key, { label, emoji }]) => {
                   const isSelected = key === selectedTheme;
-                  const isActive = key === theme;
-                  const isAuto = AUTO_THEMES.has(key);
-
                   return (
                     <button
                       key={key}
@@ -84,20 +79,7 @@ export const TopBar = ({ onExport, theme, selectedTheme, setTheme, isAutoMode }:
                     >
                       <span style={{ fontSize: 18 }}>{emoji}</span>
                       <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
-                      {isAuto && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 800, letterSpacing: '0.05em',
-                          background: 'var(--line, #1D1A18)', color: 'var(--bg, #fff)',
-                          borderRadius: 4, padding: '1px 5px',
-                          opacity: 0.65,
-                        }}>AUTO</span>
-                      )}
-                      {isAutoMode && isActive && isAuto && (
-                        <span style={{ fontSize: 11, opacity: 0.55 }}>▶</span>
-                      )}
-                      {!isAutoMode && isSelected && (
-                        <span style={{ fontSize: 12 }}>✓</span>
-                      )}
+                      {isSelected && <span style={{ fontSize: 12 }}>✓</span>}
                     </button>
                   );
                 })}

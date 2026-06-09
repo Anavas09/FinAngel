@@ -11,14 +11,14 @@
   --bg-warm:     #FFE9D6;
 
   /* Pastel palette */
-  --coral:       #F26B5E;
+  --coral:       #C94B3E;
   --peach:       #FFD4A8;
   --mint:        #B8E6C9;
   --mint-deep:   #5BB890;
   --sky:         #7EC4F2;
   --sun:         #FFD66B;
   --lavender:    #D4C5F9;
-  --rose:        #F49B8A;
+  --rose:        #E07868;
   --rose-soft:   #F4A8C0;
 
   /* Text */
@@ -611,11 +611,8 @@ input { font-family: inherit; }
   color: var(--ink-soft);
   transition: background 160ms, color 160ms;
 }
-.fa-kind-tabs button.active {
-  background: white;
-  color: var(--ink);
-  box-shadow: var(--shadow-sm);
-}
+.fa-kind-tabs button[data-kind="expense"].active { background: var(--coral); color: white; box-shadow: var(--shadow-sm); }
+.fa-kind-tabs button[data-kind="income"].active { background: var(--mint-deep); color: white; box-shadow: var(--shadow-sm); }
 .fa-kind-tabs button span { margin-right: 4px; }
 
 .fa-field { display: flex; flex-direction: column; gap: 8px; }
@@ -883,7 +880,41 @@ input { font-family: inherit; }
   .fa-modal { padding: 8px 18px 18px; }
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-faded); }
+
+.fa-kind-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.fa-form .fa-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px; font-weight: 600;
+  color: var(--ink-soft);
+  transition: border-color 140ms, background 140ms, color 140ms;
+}
+.fa-form .fa-chip:hover { border-color: var(--ink-faded); }
+.fa-form .fa-chip.fa-chip-active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, white);
+  color: var(--ink);
+}
+
+.fa-iconbtn-ghost { background: transparent; }
+.fa-tx-amount { white-space: nowrap; }
+select.fa-input { -webkit-appearance: none; appearance: none; background-image: none; }
+.fa-greeting-text { position: relative; z-index: 2; }
+.fa-legend-item { gap: 8px; }
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fa-input:focus,
+.fa-input:focus-visible,
+.fa-amount-input input:focus,
+.fa-amount-input input:focus-visible { outline: none; }
+
+.fa-empty svg { margin-bottom: 4px; }

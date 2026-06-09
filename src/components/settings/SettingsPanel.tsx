@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CATEGORIES } from '../../data/constants';
-import type { Budget, Tweaks } from '../../types';
+import type { Budget, ChartDataItem, Tweaks } from '../../types';
 
 interface SettingsPanelProps {
   tweaks: Tweaks;
@@ -14,6 +14,7 @@ interface SettingsPanelProps {
   budgets: Budget[];
   onSetBudget: (categoryId: string, amount: number) => void;
   onRemoveBudget: (categoryId: string) => void;
+  categoryData: ChartDataItem[];
 }
 
 interface RowProps {
@@ -28,7 +29,7 @@ interface ToggleBtnProps {
 
 const ACCENT_COLORS = ['#FF5C4D', '#5BB890', '#7EC4F2', '#D4C5F9', '#F2C94C'];
 
-export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail, userName, onUpdateName, budgets, onSetBudget, onRemoveBudget }: SettingsPanelProps) => {
+export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail, userName, onUpdateName, budgets, onSetBudget, onRemoveBudget, categoryData }: SettingsPanelProps) => {
   const [open, setOpen] = useState(false);
   const [editName, setEditName] = useState(userName);
   const [savingName, setSavingName] = useState(false);
@@ -217,33 +218,48 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                 const saved = budgets.find(b => b.categoryId === c.id);
                 const val = budgetInputs[c.id] ?? '';
                 const isDirty = val !== (saved ? String(saved.amount) : '');
+                const spent = categoryData.find(d => d.id === c.id)?.value ?? 0;
+                const pct = saved ? Math.min((spent / saved.amount) * 100, 100) : 0;
+                const barColor = pct >= 100 ? '#C13B3B' : pct >= 80 ? '#F2A63B' : '#5BB890';
                 return (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 14, width: 20 }}>{c.icon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, flex: 1, color: 'var(--ink, #1D1A18)' }}>{c.label}</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={val}
-                      placeholder="—"
-                      onChange={e => setBudgetInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
-                      style={{ width: 72, padding: '4px 8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 8, fontWeight: 700, fontSize: 12, outline: 'none' }}
-                    />
-                    {isDirty && val && (
-                      <button
-                        onClick={() => { const n = parseFloat(val); if (n > 0) onSetBudget(c.id, n); }}
-                        style={{ padding: '4px 8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 8, background: 'var(--mint, #B8E6C9)', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}
-                      >
-                        ✓
-                      </button>
-                    )}
-                    {saved && !isDirty && (
-                      <button
-                        onClick={() => { onRemoveBudget(c.id); setBudgetInputs(prev => ({ ...prev, [c.id]: '' })); }}
-                        style={{ padding: '4px 8px', border: '2px solid #C44A3D', borderRadius: 8, background: 'white', fontWeight: 800, fontSize: 11, cursor: 'pointer', color: '#C44A3D' }}
-                      >
-                        ✕
-                      </button>
+                  <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 14, width: 20 }}>{c.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, flex: 1, color: 'var(--ink, #1D1A18)' }}>{c.label}</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={val}
+                        placeholder="—"
+                        onChange={e => setBudgetInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
+                        style={{ width: 72, padding: '4px 8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 8, fontWeight: 700, fontSize: 12, outline: 'none' }}
+                      />
+                      {isDirty && val && (
+                        <button
+                          onClick={() => { const n = parseFloat(val); if (n > 0) onSetBudget(c.id, n); }}
+                          style={{ padding: '4px 8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 8, background: 'var(--mint, #B8E6C9)', fontWeight: 800, fontSize: 11, cursor: 'pointer' }}
+                        >
+                          ✓
+                        </button>
+                      )}
+                      {saved && !isDirty && (
+                        <button
+                          onClick={() => { onRemoveBudget(c.id); setBudgetInputs(prev => ({ ...prev, [c.id]: '' })); }}
+                          style={{ padding: '4px 8px', border: '2px solid #C44A3D', borderRadius: 8, background: 'white', fontWeight: 800, fontSize: 11, cursor: 'pointer', color: '#C44A3D' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    {saved && (
+                      <div style={{ paddingLeft: 26 }}>
+                        <div style={{ height: 4, borderRadius: 2, background: 'var(--line-soft, #DBCFB4)', overflow: 'hidden', marginBottom: 2 }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2, transition: 'width 300ms' }} />
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--ink-muted, #8A7E72)', fontWeight: 600 }}>
+                          ${Math.round(spent).toLocaleString('es-AR')} / ${Math.round(saved.amount).toLocaleString('es-AR')}
+                        </span>
+                      </div>
                     )}
                   </div>
                 );

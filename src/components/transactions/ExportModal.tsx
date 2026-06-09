@@ -93,9 +93,9 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
               <span>Ingresos</span>
               <strong style={{ color: '#3F8F69' }}>+{fmtMoney(totalIn, 'ARS')}</strong>
             </div>
-            <div className="fa-export-stat" style={{ background: '#FDE6E1' }}>
+            <div className="fa-export-stat" style={{ background: '#FDEDED' }}>
               <span>Egresos</span>
-              <strong style={{ color: '#C44A3D' }}>-{fmtMoney(totalOut, 'ARS')}</strong>
+              <strong style={{ color: '#C13B3B' }}>-{fmtMoney(totalOut, 'ARS')}</strong>
             </div>
           </div>
 
@@ -128,7 +128,7 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
                       </span>
                     </td>
                     <td>{t.note}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: t.amount >= 0 ? '#3F8F69' : '#C44A3D' }}>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: t.amount >= 0 ? '#3F8F69' : '#C13B3B' }}>
                       {t.amount >= 0 ? '+' : ''}{fmtMoney(t.amount, a?.currency ?? 'ARS')}
                     </td>
                   </tr>

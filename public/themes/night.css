@@ -9,14 +9,14 @@
   --bg-soft:      #262947;
   --bg-warm:      #2E2A4A;
 
-  --coral:        #FF8A7A;
+  --coral:        #FF5F5F;
   --peach:        #FFC79A;
   --mint:         #8FE3B4;
   --mint-deep:    #5BB890;
   --sky:          #8FBFFF;
   --sun:          #FFD66B;
   --lavender:    #C8B5FF;
-  --rose:         #FF9DAE;
+  --rose:         #FF7878;
   --rose-soft:   #F4A8C0;
 
   --ink:          #F5EFE0;
@@ -472,7 +472,8 @@ input { font-family: inherit; }
   font-weight: 700; font-size: 14px; color: var(--ink-soft);
   transition: all 160ms;
 }
-.fa-kind-tabs button.active { background: var(--accent); color: #15172A; }
+.fa-kind-tabs button[data-kind="expense"].active { background: var(--coral); color: white; }
+.fa-kind-tabs button[data-kind="income"].active { background: var(--mint); color: #15172A; }
 .fa-kind-tabs button span { margin-right: 4px; }
 
 .fa-field { display: flex; flex-direction: column; gap: 8px; }

@@ -59,10 +59,10 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
 
         <form onSubmit={submit} className="fa-form">
           <div className="fa-kind-tabs">
-            <button type="button" className={kind === 'expense' ? 'active' : ''} onClick={() => setKind('expense')}>
+            <button type="button" data-kind="expense" className={kind === 'expense' ? 'active' : ''} onClick={() => setKind('expense')}>
               <span>↓</span> Gasto
             </button>
-            <button type="button" className={kind === 'income' ? 'active' : ''} onClick={() => setKind('income')}>
+            <button type="button" data-kind="income" className={kind === 'income' ? 'active' : ''} onClick={() => setKind('income')}>
               <span>↑</span> Ingreso
             </button>
           </div>

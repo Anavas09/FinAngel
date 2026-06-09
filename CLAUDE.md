@@ -28,7 +28,7 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 
 **Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount, auto-generates recurring transactions, and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`.
 
-**Theme system** — four CSS-only themes in `public/themes/{sticker,warm,night,pastel}.css`. `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage. `ThemeKey = 'sticker' | 'warm' | 'night' | 'pastel'`.
+**Theme system** — three CSS themes + an `auto` mode: `public/themes/{sticker,warm,night}.css` (plus `pastel.css` kept but not selectable). `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage. `ThemeKey = 'sticker' | 'warm' | 'night' | 'auto'`. Auto mode switches between `night` (18h–6h) and `warm` (6h–18h); stored as `'auto'` in localStorage. TopBar shows current effective theme label in auto mode.
 
 **Tweaks** — `useTweaks` (`src/hooks/useTweaks.ts`) manages the `Tweaks` object. `layout` is applied as `fa-layout-{layout}` on the root div. `fxUSD`/`fxUSDT` override the hardcoded rates in `FX_TO_ARS` at runtime.
 
@@ -120,8 +120,12 @@ e2e/
 - Settings panel: `[style*="z-index: 100"][style*="bottom: 90px"]`
 - Panel rows: `div:has(span:text-is("Label"))` · Search: `getByPlaceholder('Buscar nota o cuenta…')`
 
+## Companion mobile app
+
+React Native + Expo app with shared business logic. Repo: `C:\Users\angel\OneDrive\Documentos\React Native\FinAngel-Mobile` (has its own CLAUDE.md).
+
 ## Pending work (security hardening)
 
 Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component.
 
-Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation, Content Security Policy headers in `index.html` (including `https://dolarapi.com` in `connect-src`), comprehensive input validation (monto ≤ 12 dígitos, nota ≤ 200 chars), re-fetch on tab-switch fix (`[session?.user.id]` in `useFinanceData`/`useDebtsData`), FX inputs sync fix (`useEffect` in `SettingsPanel`).
+Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation, Content Security Policy headers in `index.html` (including `https://dolarapi.com` in `connect-src`), comprehensive input validation (monto ≤ 12 dígitos, nota ≤ 200 chars), re-fetch on tab-switch fix (`[session?.user.id]` in `useFinanceData`/`useDebtsData`), FX inputs sync fix (`useEffect` in `SettingsPanel`), budget progress bars inline in `SettingsPanel` (mini 4px bar + `$spent/$budget`, color-coded green/yellow/red, `categoryData` prop from `App.tsx`), expense/egreso colors shifted to red (`--coral`/`--rose` en los 4 temas), Gasto/Ingreso tabs diferenciados por `data-kind` attribute + CSS (rojo/verde) en `AddTransactionModal`, colores hardcoded en `ExportModal` y `SettingsPanel` actualizados a `#C13B3B`, `pastel` theme reemplazado por opción `auto` en `ThemeKey`.
