@@ -278,12 +278,18 @@ const App = () => {
           <AddTransactionModal
             accounts={accounts}
             editing={editingTx}
-            debts={debts.debts.filter(d => d.status === 'active')}
+            debts={debts.debts}
             preselectedDebtId={preselectedDebtId ?? undefined}
             onClose={() => { setAddOpen(false); setEditingTx(null); setPreselectedDebtId(null); }}
             onSave={(tx, debtId) => {
               finance.upsertTx(tx);
-              if (debtId) debts.partialPayDebt(debtId, Math.abs(tx.amount));
+              if (editingTx?.id && debtId) {
+                const oldAbsAmount = Math.abs(editingTx.amount);
+                const newAbsAmount = Math.abs(tx.amount);
+                debts.adjustDebtPayment(debtId, newAbsAmount - oldAbsAmount);
+              } else if (debtId) {
+                debts.partialPayDebt(debtId, Math.abs(tx.amount));
+              }
               setAddOpen(false);
               setEditingTx(null);
               setPreselectedDebtId(null);

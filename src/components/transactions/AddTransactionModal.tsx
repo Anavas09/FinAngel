@@ -15,6 +15,7 @@ interface AddTransactionModalProps {
 
 export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete, debts, preselectedDebtId }: AddTransactionModalProps) => {
   const prefilledDebt = !editing ? debts?.find(d => d.id === preselectedDebtId) : undefined;
+  const editingLinkedDebt = editing?.debtId ? debts?.find(d => d.id === editing.debtId) : undefined;
 
   const [kind, setKind] = useState<'income' | 'expense'>(
     editing ? (editing.amount >= 0 ? 'income' : 'expense') : 'expense'
@@ -33,7 +34,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
   const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
   const [amountError, setAmountError] = useState(false);
   const [recurring, setRecurring] = useState<Transaction['recurring'] | ''>(editing?.recurring ?? '');
-  const [debtId, setDebtId] = useState(preselectedDebtId ?? '');
+  const [debtId, setDebtId] = useState(editing?.debtId ?? preselectedDebtId ?? '');
 
   const selectedAccount = accounts.find(a => a.id === accountId);
   const matchingDebts = !editing && kind === 'expense' && debts
@@ -48,7 +49,9 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
-    const validDebtId = matchingDebts.some(d => d.id === debtId) ? debtId : undefined;
+    const validDebtId = editing?.debtId
+      ? editing.debtId
+      : (matchingDebts.some(d => d.id === debtId) ? debtId : undefined);
     onSave(
       {
         id: editing?.id,
@@ -58,6 +61,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
         amount: signed,
         note: cleanNote,
         ...(recurring ? { recurring } : {}),
+        ...(validDebtId ? { debtId: validDebtId } : {}),
       },
       validDebtId,
     );
@@ -140,6 +144,18 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                 ))}
               </div>
             </label>
+          )}
+
+          {editingLinkedDebt && (
+            <div className="fa-field">
+              <span className="fa-field-label">Deuda vinculada</span>
+              <div style={{ fontSize: 13, padding: '8px 12px', background: 'var(--surface)', borderRadius: 10, opacity: 0.8 }}>
+                {editingLinkedDebt.name} · pendiente: {fmtMoney(editingLinkedDebt.remainingAmount, editingLinkedDebt.currency, false)}
+              </div>
+              <span style={{ fontSize: 11, opacity: 0.55, marginTop: 4, display: 'block' }}>
+                El saldo de la deuda se ajustará con el nuevo monto
+              </span>
+            </div>
           )}
 
           {matchingDebts.length > 0 && (

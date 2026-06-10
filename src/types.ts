@@ -24,6 +24,7 @@ export interface Transaction {
   amount: number;
   note: string;
   recurring?: 'monthly' | 'weekly';
+  debtId?: string;
 }
 
 export type TransactionInput = Omit<Transaction, 'id'> & { id?: string };

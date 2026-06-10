@@ -77,6 +77,17 @@ export const useDebtsData = (
     });
   };
 
+  // delta > 0: more paid (reduce remaining), delta < 0: less paid (restore remaining)
+  const adjustDebtPayment = (id: string, delta: number) => {
+    const debt = debts.find(d => d.id === id);
+    if (!debt) return;
+    const newRemaining = Math.max(0, debt.remainingAmount - delta);
+    editDebt(id, {
+      remainingAmount: newRemaining,
+      status: newRemaining === 0 ? 'paid' : 'active',
+    });
+  };
+
   const totalDebtARS = useMemo(
     () => debts
       .filter(d => d.status === 'active')
@@ -91,5 +102,5 @@ export const useDebtsData = (
 
   const clearDebts = () => setDebts([]);
 
-  return { debts, addDebt, editDebt, removeDebt, markDebtPaid, partialPayDebt, totalDebtARS, clearDebts, reorderDebts };
+  return { debts, addDebt, editDebt, removeDebt, markDebtPaid, partialPayDebt, adjustDebtPayment, totalDebtARS, clearDebts, reorderDebts };
 };
