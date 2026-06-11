@@ -11,7 +11,7 @@ export const ACCOUNTS_SEED: AccountSeed[] = [
 export const CATEGORIES: Category[] = [
   { id: 'comida',           label: 'Comida',          color: '#F26B5E', icon: '🛒' },
   { id: 'vivienda',         label: 'Vivienda',        color: '#7EC4F2', icon: '🏠' },
-  { id: 'luz_gas',          label: 'Luz / Gas',       color: '#F2C94C', icon: '💡' },
+  { id: 'luz_gas',          label: 'Luz / Agua / Gas', color: '#F2C94C', icon: '💡' },
   { id: 'internet',         label: 'Internet / Tel.', color: '#7DD3FC', icon: '🌐' },
   { id: 'suscripciones',    label: 'Suscripciones',   color: '#C4B5FD', icon: '📱' },
   { id: 'salud',            label: 'Salud',           color: '#5BB890', icon: '🩺' },
@@ -19,6 +19,7 @@ export const CATEGORIES: Category[] = [
   { id: 'ahorro',           label: 'Ahorro',          color: '#F49B8A', icon: '🐷' },
   { id: 'ingreso',          label: 'Ingreso',         color: '#5BB890', icon: '💰' },
   { id: 'otros',            label: 'Otros',           color: '#B8B0A0', icon: '✨' },
+  { id: 'monotributo',      label: 'Monotributo',     color: '#E8A838', icon: '🧾' },
   { id: 'transfer',         label: 'Transferencia',   color: '#A78BFA', icon: '↔️' },
   { id: 'envio_pago',       label: 'Envío / Pago',    color: '#C13B3B', icon: '💸' },
 ];

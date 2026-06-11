@@ -16,6 +16,8 @@ const TransferModal        = lazy(() => import('./components/transactions/Transf
 const AddAccountModal      = lazy(() => import('./components/accounts/AddAccountModal').then(m => ({ default: m.AddAccountModal })));
 const ExportModal          = lazy(() => import('./components/transactions/ExportModal').then(m => ({ default: m.ExportModal })));
 const AddDebtModal         = lazy(() => import('./components/debts/AddDebtModal').then(m => ({ default: m.AddDebtModal })));
+const QuickPayDebtModal    = lazy(() => import('./components/debts/QuickPayDebtModal').then(m => ({ default: m.QuickPayDebtModal })));
+import type { Debt } from './types';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { DebtList } from './components/debts/DebtList';
 import { FinAngelMini } from './components/mascot/Mascot';
@@ -44,7 +46,7 @@ const App = () => {
           debtOpen, setDebtOpen, editingDebt, setEditingDebt,
           toast, showToast, clearToast } = modals;
 
-  const [preselectedDebtId, setPreselectedDebtId] = useState<string | null>(null);
+  const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [txSearch, setTxSearch]             = useState('');
@@ -165,7 +167,7 @@ const App = () => {
           onEdit={d => { setEditingDebt(d); setDebtOpen(true); }}
           onDelete={id => debts.removeDebt(id)}
           onMarkPaid={id => debts.markDebtPaid(id)}
-          onPayDebt={d => { setPreselectedDebtId(d.id); setAddOpen(true); }}
+          onPayDebt={d => setPayingDebt(d)}
           onReorder={debts.reorderDebts}
         />
 
@@ -279,8 +281,7 @@ const App = () => {
             accounts={accounts}
             editing={editingTx}
             debts={debts.debts}
-            preselectedDebtId={preselectedDebtId ?? undefined}
-            onClose={() => { setAddOpen(false); setEditingTx(null); setPreselectedDebtId(null); }}
+            onClose={() => { setAddOpen(false); setEditingTx(null); }}
             onSave={(tx, debtId) => {
               finance.upsertTx(tx);
               if (editingTx?.id && debtId) {
@@ -292,7 +293,6 @@ const App = () => {
               }
               setAddOpen(false);
               setEditingTx(null);
-              setPreselectedDebtId(null);
             }}
             onDelete={editingTx?.id ? () => {
               const undo = finance.deleteTx(editingTx.id!);
@@ -323,6 +323,22 @@ const App = () => {
             onClose={() => { setDebtOpen(false); setEditingDebt(null); }}
             onSave={fields => debts.addDebt(fields)}
             onUpdate={(id, fields) => debts.editDebt(id, fields)}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {payingDebt && (
+          <QuickPayDebtModal
+            debt={payingDebt}
+            accounts={accounts}
+            onClose={() => setPayingDebt(null)}
+            onSave={(tx, debtId) => {
+              finance.upsertTx(tx);
+              debts.partialPayDebt(debtId, Math.abs(tx.amount));
+              setPayingDebt(null);
+              showToast('Pago registrado');
+            }}
           />
         )}
       </Suspense>
