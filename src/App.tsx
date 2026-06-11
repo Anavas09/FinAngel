@@ -257,6 +257,7 @@ const App = () => {
         {transferOpen && (
           <TransferModal
             accounts={accounts}
+            privacy={privacy}
             onClose={() => setTransferOpen(false)}
             onSave={(fromId, toId, amount, date, note) => {
               finance.insertTransfer(fromId, toId, amount, date, note);
@@ -281,6 +282,7 @@ const App = () => {
             accounts={accounts}
             editing={editingTx}
             debts={debts.debts}
+            privacy={privacy}
             onClose={() => { setAddOpen(false); setEditingTx(null); }}
             onSave={(tx, debtId) => {
               finance.upsertTx(tx);
@@ -295,10 +297,17 @@ const App = () => {
               setEditingTx(null);
             }}
             onDelete={editingTx?.id ? () => {
-              const undo = finance.deleteTx(editingTx.id!);
+              const tx = editingTx!;
+              const debtId = tx.debtId;
+              const absAmt = Math.abs(tx.amount);
+              const undo = finance.deleteTx(tx.id!);
+              if (debtId) debts.adjustDebtPayment(debtId, -absAmt);
               setAddOpen(false);
               setEditingTx(null);
-              showToast('Movimiento eliminado', undo);
+              showToast('Movimiento eliminado', () => {
+                undo();
+                if (debtId) debts.adjustDebtPayment(debtId, absAmt);
+              });
             } : null}
           />
         )}
@@ -332,6 +341,7 @@ const App = () => {
           <QuickPayDebtModal
             debt={payingDebt}
             accounts={accounts}
+            privacy={privacy}
             onClose={() => setPayingDebt(null)}
             onSave={(tx, debtId) => {
               finance.upsertTx(tx);

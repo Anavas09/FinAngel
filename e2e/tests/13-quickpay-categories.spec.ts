@@ -155,6 +155,35 @@ test('puede seleccionar Monotributo y registrar un gasto', async ({ withSeed: ap
   await expect(app.page.locator('.fa-tx-note', { hasText: 'Cuota monotributo' })).toBeVisible();
 });
 
+// ─── Eliminar pago de deuda restaura el remainingAmount ──────────────────────
+
+test('eliminar pago de deuda restaura el remainingAmount de la deuda', async ({ withSeed: app }) => {
+  // Crear deuda de 5000 (remainingAmount = totalAmount por defecto)
+  await app.openAddDebt();
+  await fillDebtForm(app.page, { name: 'Deuda restore test', totalAmount: '5000' });
+  await submitDebtForm(app.page);
+
+  const debtCard = app.getDebts().filter({ hasText: 'Deuda restore test' });
+  await expect(debtCard.getByText('0% pagado')).toBeVisible();
+
+  // Registrar pago parcial de 1000 via QuickPayDebtModal
+  await debtCard.getByTitle('Registrar pago').click();
+  const modal = app.page.locator('.fa-modal');
+  await modal.locator('.fa-amount-input input').fill('1000');
+  await modal.getByRole('button', { name: 'Registrar pago' }).click();
+  await expect(modal).not.toBeVisible({ timeout: 5_000 });
+
+  // Confirmar que el monto pendiente bajó (1000 de 5000 = 20% pagado)
+  await expect(debtCard.getByText('20% pagado')).toBeVisible();
+
+  // Abrir la transacción del pago y eliminarla
+  await app.getTransactionItems().filter({ hasText: 'Pago de Deuda restore test' }).first().click();
+  await app.page.locator('.fa-modal').getByRole('button', { name: 'Eliminar' }).click();
+
+  // El remainingAmount debe volver a 5000 (0% pagado)
+  await expect(debtCard.getByText('0% pagado')).toBeVisible({ timeout: 5_000 });
+});
+
 // ─── Eliminar transacción restaura el balance ─────────────────────────────────
 
 test('eliminar transacción restaura el balance de la cuenta', async ({ withSeed: app }) => {

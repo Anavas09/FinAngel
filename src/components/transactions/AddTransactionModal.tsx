@@ -11,9 +11,10 @@ interface AddTransactionModalProps {
   onDelete: (() => void) | null;
   debts?: Debt[];
   preselectedDebtId?: string;
+  privacy: boolean;
 }
 
-export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete, debts, preselectedDebtId }: AddTransactionModalProps) => {
+export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDelete, debts, preselectedDebtId, privacy }: AddTransactionModalProps) => {
   const prefilledDebt = !editing ? debts?.find(d => d.id === preselectedDebtId) : undefined;
   const editingLinkedDebt = editing?.debtId ? debts?.find(d => d.id === editing.debtId) : undefined;
 
@@ -33,6 +34,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
   const [note, setNote] = useState(editing?.note ?? (prefilledDebt ? `Pago de ${prefilledDebt.name}` : ''));
   const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
   const [amountError, setAmountError] = useState(false);
+  const [accountError, setAccountError] = useState(false);
   const [recurring, setRecurring] = useState<Transaction['recurring'] | ''>(editing?.recurring ?? '');
   const [debtId, setDebtId] = useState(editing?.debtId ?? preselectedDebtId ?? '');
 
@@ -47,6 +49,10 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
     if (!num || isNaN(num) || num <= 0) { setAmountError(true); return; }
     setAmountError(false);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    if (kind === 'expense' && selectedAccount && num > selectedAccount.balance) {
+      setAccountError(true); return;
+    }
+    setAccountError(false);
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
     const validDebtId = editing?.debtId
@@ -100,7 +106,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={e => { setAmountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
+                onChange={e => { setAmountError(false); setAccountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
                 placeholder="0"
                 autoFocus
               />
@@ -117,13 +123,23 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                   key={a.id}
                   type="button"
                   className={`fa-account-chip ${accountId === a.id ? 'active' : ''}`}
-                  onClick={() => setAccountId(a.id)}
+                  onClick={() => { setAccountId(a.id); setAccountError(false); }}
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
+                  {!privacy && (
+                    <span style={{ opacity: 0.6, fontSize: 11, marginLeft: 4 }}>
+                      {fmtMoney(a.balance, a.currency, false)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
+            {accountError && selectedAccount && (
+              <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
+                Saldo insuficiente{!privacy ? ` (disponible: ${fmtMoney(selectedAccount.balance, selectedAccount.currency, false)})` : ''}
+              </span>
+            )}
           </label>
 
           {kind === 'expense' && (

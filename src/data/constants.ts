@@ -20,6 +20,7 @@ export const CATEGORIES: Category[] = [
   { id: 'ingreso',          label: 'Ingreso',         color: '#5BB890', icon: '💰' },
   { id: 'otros',            label: 'Otros',           color: '#B8B0A0', icon: '✨' },
   { id: 'monotributo',      label: 'Monotributo',     color: '#E8A838', icon: '🧾' },
+  { id: 'impuestos',        label: 'Impuestos',       color: '#8B7355', icon: '🏛️' },
   { id: 'transfer',         label: 'Transferencia',   color: '#A78BFA', icon: '↔️' },
   { id: 'envio_pago',       label: 'Envío / Pago',    color: '#C13B3B', icon: '💸' },
 ];

@@ -115,7 +115,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                     padding: '6px 12px',
                     border: '2px solid var(--line, #1D1A18)',
                     borderRadius: 10,
-                    background: 'white',
+                    background: 'var(--bg-soft, white)',
                     fontWeight: 700, fontSize: 12,
                     cursor: 'pointer',
                     color: 'var(--ink, #1D1A18)',
@@ -245,7 +245,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                       {saved && !isDirty && (
                         <button
                           onClick={() => { onRemoveBudget(c.id); setBudgetInputs(prev => ({ ...prev, [c.id]: '' })); }}
-                          style={{ padding: '4px 8px', border: '2px solid #C44A3D', borderRadius: 8, background: 'white', fontWeight: 800, fontSize: 11, cursor: 'pointer', color: '#C44A3D' }}
+                          style={{ padding: '4px 8px', border: '2px solid #C44A3D', borderRadius: 8, background: 'var(--bg-soft, white)', fontWeight: 800, fontSize: 11, cursor: 'pointer', color: '#C44A3D' }}
                         >
                           ✕
                         </button>
@@ -274,7 +274,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                     padding: '10px 16px',
                     border: '2px solid var(--line, #1D1A18)',
                     borderRadius: 999,
-                    background: 'white',
+                    background: 'var(--bg-soft, white)',
                     fontWeight: 700, fontSize: 13,
                     cursor: 'pointer',
                     color: 'var(--ink, #1D1A18)',
@@ -293,7 +293,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button
                         onClick={() => setConfirmClear(false)}
-                        style={{ flex: 1, padding: '8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 999, background: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+                        style={{ flex: 1, padding: '8px', border: '2px solid var(--line, #1D1A18)', borderRadius: 999, background: 'var(--bg-soft, white)', fontWeight: 700, fontSize: 12, cursor: 'pointer', color: 'var(--ink, #1D1A18)' }}
                       >
                         Cancelar
                       </button>
@@ -312,7 +312,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                       padding: '10px 16px',
                       border: '2px solid #C44A3D',
                       borderRadius: 999,
-                      background: 'white',
+                      background: 'var(--bg-soft, white)',
                       fontWeight: 700, fontSize: 13,
                       cursor: 'pointer',
                       color: '#C44A3D',
@@ -331,7 +331,7 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
                 padding: '10px 16px',
                 border: '2px solid #C44A3D',
                 borderRadius: 999,
-                background: 'white',
+                background: 'var(--bg-soft, white)',
                 fontWeight: 700, fontSize: 13,
                 cursor: 'pointer',
                 color: '#C44A3D',
@@ -370,7 +370,7 @@ const selectStyle: React.CSSProperties = {
   padding: '6px 10px',
   border: '2px solid var(--line, #1D1A18)',
   borderRadius: 10,
-  background: 'white',
+  background: 'var(--bg-soft, white)',
   fontWeight: 700, fontSize: 13,
   cursor: 'pointer',
   color: 'var(--ink, #1D1A18)',

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fmtMoney } from '../../data/utils';
 import type { Account, Debt, TransactionInput } from '../../types';
 
 interface Props {
@@ -6,9 +7,10 @@ interface Props {
   accounts: Account[];
   onClose: () => void;
   onSave: (tx: TransactionInput, debtId: string) => void;
+  privacy: boolean;
 }
 
-export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave }: Props) => {
+export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave, privacy }: Props) => {
   const eligible = accounts.filter(a => a.visible && a.currency === debt.currency);
   const [accountId, setAccountId] = useState(eligible[0]?.id ?? '');
   const [amount, setAmount] = useState(String(debt.monthlyPayment ?? debt.remainingAmount));
@@ -40,10 +42,15 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave }: Props) =>
     );
   }
 
+  const selectedAcc = eligible.find(a => a.id === accountId);
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
     if (!num || isNaN(num) || num <= 0 || num > debt.remainingAmount) {
+      setAmountError(true); return;
+    }
+    if (selectedAcc && num > selectedAcc.balance) {
       setAmountError(true); return;
     }
     onSave(
@@ -74,10 +81,15 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave }: Props) =>
                   key={a.id}
                   type="button"
                   className={`fa-account-chip ${accountId === a.id ? 'active' : ''}`}
-                  onClick={() => setAccountId(a.id)}
+                  onClick={() => { setAccountId(a.id); setAmountError(false); }}
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
+                  {!privacy && (
+                    <span style={{ opacity: 0.6, fontSize: 11, marginLeft: 4 }}>
+                      {fmtMoney(a.balance, a.currency, false)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -101,7 +113,10 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave }: Props) =>
             </div>
             {amountError && (
               <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
-                Monto inválido (máx. {debt.remainingAmount.toLocaleString('es-AR')})
+                {selectedAcc && parseFloat(amount.replace(',', '.')) > selectedAcc.balance
+                  ? `Saldo insuficiente${!privacy ? ` (disponible: ${fmtMoney(selectedAcc.balance, debt.currency, false)})` : ''}`
+                  : `Monto inválido (máx. ${debt.remainingAmount.toLocaleString('es-AR')})`
+                }
               </span>
             )}
           </label>

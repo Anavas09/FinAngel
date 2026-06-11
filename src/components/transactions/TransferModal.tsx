@@ -1,19 +1,22 @@
 import { useState } from 'react';
+import { fmtMoney } from '../../data/utils';
 import type { Account } from '../../types';
 
 interface TransferModalProps {
   accounts: Account[];
   onClose: () => void;
   onSave: (fromId: string, toId: string, amount: number, date: string, note: string) => void;
+  privacy: boolean;
 }
 
-export const TransferModal = ({ accounts, onClose, onSave }: TransferModalProps) => {
+export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferModalProps) => {
   const [fromId, setFromId] = useState(accounts[0]?.id ?? '');
   const [toId, setToId]     = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
   const [amount, setAmount] = useState('');
   const [date, setDate]     = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote]     = useState('');
   const [amountError, setAmountError] = useState(false);
+  const [accountError, setAccountError] = useState(false);
 
   const fromAccount = accounts.find(a => a.id === fromId);
 
@@ -21,7 +24,10 @@ export const TransferModal = ({ accounts, onClose, onSave }: TransferModalProps)
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
     if (!num || isNaN(num) || num <= 0) { setAmountError(true); return; }
+    setAmountError(false);
     if (fromId === toId) return;
+    if (fromAccount && num > fromAccount.balance) { setAccountError(true); return; }
+    setAccountError(false);
     onSave(fromId, toId, num, date, note.trim() || 'Transferencia');
   };
 
@@ -47,13 +53,23 @@ export const TransferModal = ({ accounts, onClose, onSave }: TransferModalProps)
                   key={a.id}
                   type="button"
                   className={`fa-account-chip ${fromId === a.id ? 'active' : ''}`}
-                  onClick={() => { setFromId(a.id); if (toId === a.id) setToId(accounts.find(x => x.id !== a.id)?.id ?? ''); }}
+                  onClick={() => { setFromId(a.id); setAccountError(false); if (toId === a.id) setToId(accounts.find(x => x.id !== a.id)?.id ?? ''); }}
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
+                  {!privacy && (
+                    <span style={{ opacity: 0.6, fontSize: 11, marginLeft: 4 }}>
+                      {fmtMoney(a.balance, a.currency, false)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
+            {accountError && fromAccount && (
+              <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
+                Saldo insuficiente{!privacy ? ` (disponible: ${fmtMoney(fromAccount.balance, fromAccount.currency, false)})` : ''}
+              </span>
+            )}
           </label>
 
           <label className="fa-field">
@@ -68,6 +84,11 @@ export const TransferModal = ({ accounts, onClose, onSave }: TransferModalProps)
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
+                  {!privacy && (
+                    <span style={{ opacity: 0.6, fontSize: 11, marginLeft: 4 }}>
+                      {fmtMoney(a.balance, a.currency, false)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -81,7 +102,7 @@ export const TransferModal = ({ accounts, onClose, onSave }: TransferModalProps)
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={e => { setAmountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
+                onChange={e => { setAmountError(false); setAccountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
                 placeholder="0"
                 autoFocus
               />
