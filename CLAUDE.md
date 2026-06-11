@@ -72,6 +72,9 @@ src/components/
                 AddTransactionModal — add/edit form with recurring field
                 TransferModal       — inter-account transfer (creates two linked txs)
                 ExportModal         — CSV export with sanitization
+  debts/        DebtList            — debt cards with quick-pay, edit, mark-paid, delete
+                AddDebtModal        — create/edit debt form
+                QuickPayDebtModal   — quick payment: account+amount+date; auto-updates balance & remainingAmount
   accounts/     AddAccountModal     — new account: kind, currency, color, emoji, balance
   mascot/       Mascot / MascotMini — SVG mascot, 6 mood states
   settings/     SettingsPanel       — theme, personality, layout, FX rates, budgets, sign out
@@ -105,17 +108,18 @@ e2e/
     07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
     08-search-filter.spec.ts    — 7 tests: buscar texto/vacío/limpiar, filtro período, "Todos", combinado, buscar por cuenta
     09-charts.spec.ts           — 8 tests: 2 cards, títulos, leyenda % y valores, Ingresos/Egresos, hover, SVG paths, privacidad
-    10-debts.spec.ts            — 13 tests: estado vacío, crear mínima/completa, max chars, pendiente default, editar, pagar, eliminar+undo, vencida, total ARS
+    10-debts.spec.ts            — 14 tests: estado vacío, crear mínima/completa, max chars, pendiente default, editar, pagar, eliminar+undo, vencida, total ARS
     11-render-stability.spec.ts — 8 tests: diagnóstico de parpadeos al cambiar de pestaña (baseline requests, spinner re-aparece, re-fetch post-carga, FX mount-only, total estable, MutationObserver, timing)
     12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
+    13-quickpay-categories.spec.ts — 12 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance
 ```
 
-**108 tests en total — 107/108 pasan**. El único fallo conocido: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente en la suite completa por rate-limit de `supabase.auth.updateUser` después de ~40 tests; pasa en aislamiento.
+**120 tests en total — 119/120 pasan**. El único fallo conocido: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente en la suite completa por rate-limit de `supabase.auth.updateUser` después de ~40 tests; pasa en aislamiento.
 
 ### Key selectors
 - Accounts: `.fa-accounts .fa-account`, name: `.fa-account-name`
 - Transactions: `.fa-tx-list .fa-tx`, note: `.fa-tx-note`
-- Debts: `.fa-debts .fa-debt`, edit: `getByTitle('Editar')`, pay: `getByTitle('Marcar como pagada')`, delete: `getByTitle('Eliminar')`
+- Debts: `.fa-debts .fa-debt`, edit: `getByTitle('Editar')`, pay: `getByTitle('Marcar como pagada')`, quick-pay: `getByTitle('Registrar pago')`, delete: `getByTitle('Eliminar')`
 - Toast: `.fa-toast` · FAB (app loaded): `.fa-fab`
 - Settings panel: `[style*="z-index: 100"][style*="bottom: 90px"]`
 - Panel rows: `div:has(span:text-is("Label"))` · Search: `getByPlaceholder('Buscar nota o cuenta…')`
@@ -128,4 +132,4 @@ React Native + Expo app with shared business logic. Repo: `C:\Users\angel\OneDri
 
 Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component.
 
-Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation, Content Security Policy headers in `index.html` (including `https://dolarapi.com` in `connect-src`), comprehensive input validation (monto ≤ 12 dígitos, nota ≤ 200 chars), re-fetch on tab-switch fix (`[session?.user.id]` in `useFinanceData`/`useDebtsData`), FX inputs sync fix (`useEffect` in `SettingsPanel`), budget progress bars inline in `SettingsPanel` (mini 4px bar + `$spent/$budget`, color-coded green/yellow/red, `categoryData` prop from `App.tsx`), expense/egreso colors shifted to red (`--coral`/`--rose` en los 4 temas), Gasto/Ingreso tabs diferenciados por `data-kind` attribute + CSS (rojo/verde) en `AddTransactionModal`, colores hardcoded en `ExportModal` y `SettingsPanel` actualizados a `#C13B3B`, `pastel` theme reemplazado por opción `auto` en `ThemeKey`, categoría `servicios` reemplazada por `luz_gas` (Luz / Gas 💡), `internet` (Internet / Tel. 🌐) y `suscripciones` (Suscripciones 📱) en `constants.ts`, `flowData` y `categoryData` excluyen `categoryId === 'transfer'` (transferencias entre cuentas propias no inflan Ingresos/Egresos del gráfico), nueva categoría `envio_pago` (Envío / Pago 💸, color `#C13B3B`) para pagos a terceros, pago parcial de deudas: `partialPayDebt` en `useDebtsData` (descuenta `remainingAmount`, marca como pagada si llega a 0), botón 💸 en `DebtCard` abre `AddTransactionModal` con deuda pre-seleccionada, selector "Aplicar a deuda" en `AddTransactionModal` (visible en gastos nuevos, filtra por moneda de la cuenta seleccionada, auto-rellena categoría `envio_pago` y nota `Pago de {nombre}`, pre-rellena monto con cuota mensual si existe).
+Already done: CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation, Content Security Policy headers in `index.html` (including `https://dolarapi.com` in `connect-src`), comprehensive input validation (monto ≤ 12 dígitos, nota ≤ 200 chars), re-fetch on tab-switch fix (`[session?.user.id]` in `useFinanceData`/`useDebtsData`), FX inputs sync fix (`useEffect` in `SettingsPanel`), budget progress bars inline in `SettingsPanel` (mini 4px bar + `$spent/$budget`, color-coded green/yellow/red, `categoryData` prop from `App.tsx`), expense/egreso colors shifted to red (`--coral`/`--rose` en los 4 temas), Gasto/Ingreso tabs diferenciados por `data-kind` attribute + CSS (rojo/verde) en `AddTransactionModal`, colores hardcoded en `ExportModal` y `SettingsPanel` actualizados a `#C13B3B`, `pastel` theme reemplazado por opción `auto` en `ThemeKey`, categoría `servicios` reemplazada por `luz_gas` (Luz / Gas 💡), `internet` (Internet / Tel. 🌐) y `suscripciones` (Suscripciones 📱) en `constants.ts`, `flowData` y `categoryData` excluyen `categoryId === 'transfer'` (transferencias entre cuentas propias no inflan Ingresos/Egresos del gráfico), nueva categoría `envio_pago` (Envío / Pago 💸, color `#C13B3B`) para pagos a terceros, pago parcial de deudas: `partialPayDebt` en `useDebtsData` (descuenta `remainingAmount`, marca como pagada si llega a 0), botón 💸 en `DebtCard` abre `QuickPayDebtModal` (cuenta+monto+fecha; descuenta balance de cuenta y `remainingAmount` de la deuda en un paso; si no hay cuentas en la moneda de la deuda muestra mensaje de fallback), selector "Aplicar a deuda" en `AddTransactionModal` (visible en gastos nuevos, filtra por moneda de la cuenta seleccionada, auto-rellena categoría `envio_pago` y nota `Pago de {nombre}`, pre-rellena monto con cuota mensual si existe), `luz_gas` renombrado a "Luz / Agua / Gas" (id sin cambios), nueva categoría `monotributo` (Monotributo 🧾, `#E8A838`).
