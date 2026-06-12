@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { fmtMoney } from '../../data/utils';
 import type { Account, Debt, TransactionInput } from '../../types';
 
@@ -16,6 +16,7 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave, privacy }: 
   const [amount, setAmount] = useState(String(debt.monthlyPayment ?? debt.remainingAmount));
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [amountError, setAmountError] = useState(false);
+  const amountRef = useRef<HTMLInputElement>(null);
   const acc = eligible.find(a => a.id === accountId);
 
   if (eligible.length === 0) {
@@ -44,14 +45,16 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave, privacy }: 
 
   const selectedAcc = eligible.find(a => a.id === accountId);
 
+  const setError = () => { setAmountError(true); amountRef.current?.focus(); };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
     if (!num || isNaN(num) || num <= 0 || num > debt.remainingAmount) {
-      setAmountError(true); return;
+      setError(); return;
     }
     if (selectedAcc && num > selectedAcc.balance) {
-      setAmountError(true); return;
+      setError(); return;
     }
     onSave(
       { date, accountId, categoryId: 'envio_pago', amount: -num, note: `Pago de ${debt.name}`, debtId: debt.id },
@@ -102,6 +105,7 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave, privacy }: 
             <div className="fa-amount-input" style={amountError ? { border: '2px solid #C44A3D', borderRadius: 12 } : undefined}>
               <span className="fa-amount-currency">{acc?.symbol ?? '$'}</span>
               <input
+                ref={amountRef}
                 type="text"
                 inputMode="decimal"
                 value={amount}

@@ -144,6 +144,20 @@ test('transacción recurrente mensual se guarda', async ({ withSeed: app }) => {
   await expect(app.page.locator('.fa-tx-note', { hasText: 'Alquiler recurrente' })).toBeVisible();
 });
 
+test('saldo insuficiente en gasto muestra error en el input de monto', async ({ withSeed: app }) => {
+  // Mercado Pago tiene saldo 86450 ARS en seed
+  await app.openAddTransaction();
+  const modal = app.page.locator('.fa-modal');
+
+  await modal.locator('.fa-account-chip', { hasText: 'Mercado Pago' }).click();
+  await modal.locator('.fa-amount-input input').fill('999999');
+  await modal.getByRole('button', { name: 'Agregar' }).click();
+
+  // El error aparece dentro del campo de monto (no debajo de los chips de cuenta)
+  await expect(modal.locator('.fa-field-amount').getByText(/Saldo insuficiente/i)).toBeVisible();
+  await expect(modal).toBeVisible();
+});
+
 test('balance de cuenta cambia al agregar gasto', async ({ withSeed: app }) => {
   // Lee balance de la primera cuenta
   const firstCard = app.getAccounts().first();

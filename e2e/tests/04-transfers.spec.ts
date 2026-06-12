@@ -89,6 +89,21 @@ test('monto cero muestra error y no cierra el modal', async ({ withSeed: app }) 
   await expect(app.page.locator('.fa-modal')).toBeVisible();
 });
 
+test('saldo insuficiente muestra error en el input de monto', async ({ withSeed: app }) => {
+  // Mercado Pago tiene saldo 86450 ARS en seed
+  await app.openTransfer();
+  const modal = app.page.locator('.fa-modal');
+
+  await modal.locator('.fa-field', { hasText: 'Desde' })
+    .locator('.fa-account-chip', { hasText: 'Mercado Pago' }).click();
+  await modal.locator('.fa-amount-input input').fill('999999');
+  await submitTransferForm(app.page);
+
+  // El error aparece dentro del campo de monto (no debajo de los chips de cuenta)
+  await expect(modal.locator('.fa-field-amount').getByText(/Saldo insuficiente/i)).toBeVisible();
+  await expect(modal).toBeVisible();
+});
+
 test('nota vacía usa "Transferencia" como default', async ({ withSeed: app }) => {
   const fromName = await app.getAccounts().nth(0).locator('.fa-account-name').innerText();
   const toName   = await app.getAccounts().nth(1).locator('.fa-account-name').innerText();

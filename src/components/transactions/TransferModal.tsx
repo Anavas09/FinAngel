@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { fmtMoney } from '../../data/utils';
 import type { Account } from '../../types';
 
@@ -16,18 +16,19 @@ export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferMo
   const [date, setDate]     = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote]     = useState('');
   const [amountError, setAmountError] = useState(false);
-  const [accountError, setAccountError] = useState(false);
+  const amountRef = useRef<HTMLInputElement>(null);
 
   const fromAccount = accounts.find(a => a.id === fromId);
+
+  const setError = () => { setAmountError(true); amountRef.current?.focus(); };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
-    if (!num || isNaN(num) || num <= 0) { setAmountError(true); return; }
+    if (!num || isNaN(num) || num <= 0) { setError(); return; }
     setAmountError(false);
     if (fromId === toId) return;
-    if (fromAccount && num > fromAccount.balance) { setAccountError(true); return; }
-    setAccountError(false);
+    if (fromAccount && num > fromAccount.balance) { setError(); return; }
     onSave(fromId, toId, num, date, note.trim() || 'Transferencia');
   };
 
@@ -53,7 +54,7 @@ export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferMo
                   key={a.id}
                   type="button"
                   className={`fa-account-chip ${fromId === a.id ? 'active' : ''}`}
-                  onClick={() => { setFromId(a.id); setAccountError(false); if (toId === a.id) setToId(accounts.find(x => x.id !== a.id)?.id ?? ''); }}
+                  onClick={() => { setFromId(a.id); setAmountError(false); if (toId === a.id) setToId(accounts.find(x => x.id !== a.id)?.id ?? ''); }}
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
@@ -65,11 +66,6 @@ export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferMo
                 </button>
               ))}
             </div>
-            {accountError && fromAccount && (
-              <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
-                Saldo insuficiente{!privacy ? ` (disponible: ${fmtMoney(fromAccount.balance, fromAccount.currency, false)})` : ''}
-              </span>
-            )}
           </label>
 
           <label className="fa-field">
@@ -99,16 +95,23 @@ export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferMo
             <div className="fa-amount-input" style={amountError ? { border: '2px solid #C44A3D', borderRadius: 12 } : undefined}>
               <span className="fa-amount-currency">{fromAccount?.symbol ?? '$'}</span>
               <input
+                ref={amountRef}
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={e => { setAmountError(false); setAccountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
+                onChange={e => { setAmountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
                 placeholder="0"
                 autoFocus
               />
               <span className="fa-amount-ccy">{fromAccount?.currency}</span>
             </div>
-            {amountError && <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>Ingresá un monto válido mayor a cero</span>}
+            {amountError && (
+              <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
+                {fromAccount && parseFloat(amount.replace(',', '.')) > fromAccount.balance
+                  ? `Saldo insuficiente${!privacy ? ` (disponible: ${fmtMoney(fromAccount.balance, fromAccount.currency, false)})` : ''}`
+                  : 'Ingresá un monto válido mayor a cero'}
+              </span>
+            )}
           </label>
 
           <div className="fa-field-row">

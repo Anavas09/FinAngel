@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CATEGORIES } from '../../data/constants';
 import { fmtMoney } from '../../data/utils';
 import type { Account, Debt, Transaction, TransactionInput } from '../../types';
@@ -34,7 +34,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
   const [note, setNote] = useState(editing?.note ?? (prefilledDebt ? `Pago de ${prefilledDebt.name}` : ''));
   const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
   const [amountError, setAmountError] = useState(false);
-  const [accountError, setAccountError] = useState(false);
+  const amountRef = useRef<HTMLInputElement>(null);
   const [recurring, setRecurring] = useState<Transaction['recurring'] | ''>(editing?.recurring ?? '');
   const [debtId, setDebtId] = useState(editing?.debtId ?? preselectedDebtId ?? '');
 
@@ -43,16 +43,17 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
     ? debts.filter(d => d.status === 'active' && d.currency === selectedAccount?.currency)
     : [];
 
+  const setError = () => { setAmountError(true); amountRef.current?.focus(); };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
-    if (!num || isNaN(num) || num <= 0) { setAmountError(true); return; }
+    if (!num || isNaN(num) || num <= 0) { setError(); return; }
     setAmountError(false);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     if (kind === 'expense' && selectedAccount && num > selectedAccount.balance) {
-      setAccountError(true); return;
+      setError(); return;
     }
-    setAccountError(false);
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
     const validDebtId = editing?.debtId
@@ -103,16 +104,23 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
             <div className="fa-amount-input" style={amountError ? { border: '2px solid #C44A3D', borderRadius: 12 } : undefined}>
               <span className="fa-amount-currency">{selectedAccount?.symbol ?? '$'}</span>
               <input
+                ref={amountRef}
                 type="text"
                 inputMode="decimal"
                 value={amount}
-                onChange={e => { setAmountError(false); setAccountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
+                onChange={e => { setAmountError(false); if (e.target.value.replace(/[^0-9]/g, '').length <= 12) setAmount(e.target.value); }}
                 placeholder="0"
                 autoFocus
               />
               <span className="fa-amount-ccy">{selectedAccount?.currency}</span>
             </div>
-            {amountError && <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>Ingresá un monto válido mayor a cero</span>}
+            {amountError && (
+              <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
+                {kind === 'expense' && selectedAccount && parseFloat(amount.replace(',', '.')) > selectedAccount.balance
+                  ? `Saldo insuficiente${!privacy ? ` (disponible: ${fmtMoney(selectedAccount.balance, selectedAccount.currency, false)})` : ''}`
+                  : 'Ingresá un monto válido mayor a cero'}
+              </span>
+            )}
           </label>
 
           <label className="fa-field">
@@ -123,7 +131,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                   key={a.id}
                   type="button"
                   className={`fa-account-chip ${accountId === a.id ? 'active' : ''}`}
-                  onClick={() => { setAccountId(a.id); setAccountError(false); }}
+                  onClick={() => { setAccountId(a.id); setAmountError(false); }}
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
@@ -135,11 +143,6 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
                 </button>
               ))}
             </div>
-            {accountError && selectedAccount && (
-              <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
-                Saldo insuficiente{!privacy ? ` (disponible: ${fmtMoney(selectedAccount.balance, selectedAccount.currency, false)})` : ''}
-              </span>
-            )}
           </label>
 
           {kind === 'expense' && (

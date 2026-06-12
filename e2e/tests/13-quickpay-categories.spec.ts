@@ -59,6 +59,22 @@ test('quick pay pre-rellena monto con saldo pendiente cuando no hay cuota', asyn
   await expect(modal.locator('.fa-amount-input input')).toHaveValue('8000');
 });
 
+test('quick pay saldo insuficiente muestra error en el input de monto', async ({ withSeed: app }) => {
+  // Crear deuda con monto > saldo de cualquier cuenta ARS (máx ~540320 en seed)
+  await app.openAddDebt();
+  await fillDebtForm(app.page, { name: 'Deuda saldo insuf', totalAmount: '999999' });
+  await submitDebtForm(app.page);
+
+  await app.getDebts().filter({ hasText: 'Deuda saldo insuf' }).getByTitle('Registrar pago').click();
+
+  const modal = app.page.locator('.fa-modal');
+  // El monto pre-relleno es 999999 (= remainingAmount); supera el saldo de cuenta ARS
+  await modal.getByRole('button', { name: 'Registrar pago' }).click();
+
+  await expect(modal.locator('.fa-field-amount').getByText(/Saldo insuficiente/i)).toBeVisible();
+  await expect(modal).toBeVisible();
+});
+
 test('quick pay monto inválido muestra error y no cierra el modal', async ({ withSeed: app }) => {
   await app.openAddDebt();
   await fillDebtForm(app.page, { name: 'Deuda error val', totalAmount: '5000' });

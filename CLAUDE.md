@@ -101,8 +101,8 @@ e2e/
   tests/
     01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
-    03-transactions.spec.ts     — 12 tests: gasto, ingreso, validaciones, editar, eliminar+undo, recurrente, balance
-    04-transfers.spec.ts        — 6 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, nota default
+    03-transactions.spec.ts     — 13 tests: gasto, ingreso, validaciones, saldo insuficiente, editar, eliminar+undo, recurrente, balance
+    04-transfers.spec.ts        — 7 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente, nota default
     05-export.spec.ts           — 8 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF
     06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
     07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
@@ -111,10 +111,10 @@ e2e/
     10-debts.spec.ts            — 14 tests: estado vacío, crear mínima/completa, max chars, pendiente default, editar, pagar, eliminar+undo, vencida, total ARS
     11-render-stability.spec.ts — 8 tests: diagnóstico de parpadeos al cambiar de pestaña (baseline requests, spinner re-aparece, re-fetch post-carga, FX mount-only, total estable, MutationObserver, timing)
     12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
-    13-quickpay-categories.spec.ts — 13 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda
+    13-quickpay-categories.spec.ts — 14 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno monto, saldo insuficiente, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda
 ```
 
-**121 tests en total — 120/121 pasan**. El único fallo conocido: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente en la suite completa por rate-limit de `supabase.auth.updateUser` después de ~40 tests; pasa en aislamiento.
+**124 tests en total — 122/124 pasan**. Fallos conocidos: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests; `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase. Ambos pasan en aislamiento.
 
 ### Key selectors
 - Accounts: `.fa-accounts .fa-account`, name: `.fa-account-name`
