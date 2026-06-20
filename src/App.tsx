@@ -30,6 +30,7 @@ import { useMascot } from './hooks/useMascot';
 import { useLiveFx } from './hooks/useLiveFx';
 import { supabase } from './lib/supabase';
 import { fmtMoney } from './data/utils';
+import { FaDots } from './components/ui/Dots';
 
 const App = () => {
   const { theme, setTheme, selectedTheme, isAutoMode } = useTheme();
@@ -46,7 +47,8 @@ const App = () => {
           debtOpen, setDebtOpen, editingDebt, setEditingDebt,
           toast, showToast, clearToast } = modals;
 
-  const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
+  const [payingDebt, setPayingDebt]   = useState<Debt | null>(null);
+  const [signingOut, setSigningOut]   = useState(false);
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [txSearch, setTxSearch]             = useState('');
@@ -102,6 +104,14 @@ const App = () => {
 
   const { accounts, transactions, visibleAccounts, totalsByCcy, totalInARS, categoryData, flowData, monthNet } = finance;
 
+  const monthIncome   = flowData[0].value;
+  const totalBudgeted = finance.budgets.reduce((s, b) => s + b.amount, 0);
+  const budgetAlert: 'critical' | 'warning' | null =
+    finance.budgets.length === 0                              ? null :
+    totalBudgeted > totalInARS                               ? 'critical' :
+    monthIncome > 0 && totalBudgeted > monthIncome           ? 'warning' :
+    null;
+
   return (
     <div className={`fa-app fa-layout-${layout}`}>
       <TopBar onExport={() => setExportOpen(true)} theme={theme} setTheme={setTheme} selectedTheme={selectedTheme} isAutoMode={isAutoMode} />
@@ -115,6 +125,9 @@ const App = () => {
           privacy={privacy}
           setPrivacy={v => setTweak('privacy', v)}
           monthNet={monthNet}
+          budgetAlert={budgetAlert}
+          totalBudgeted={totalBudgeted}
+          monthIncome={monthIncome}
         />
 
         <section className="fa-section">
@@ -249,7 +262,11 @@ const App = () => {
         onClick={() => { setEditingTx(null); setAddOpen(true); }}
         aria-label="Agregar movimiento"
       >
-        <span className="fa-fab-plus">+</span>
+        <span className="fa-fab-plus" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1.5 V12.5 M1.5 7 H12.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+        </span>
         <span className="fa-fab-label">Agregar</span>
       </button>
 
@@ -257,6 +274,7 @@ const App = () => {
         {transferOpen && (
           <TransferModal
             accounts={accounts}
+            fxRates={fxRates}
             privacy={privacy}
             onClose={() => setTransferOpen(false)}
             onSave={(fromId, toId, amount, date, note) => {
@@ -373,7 +391,7 @@ const App = () => {
         setTweak={setTweak}
         onLoadSeed={finance.handleLoadSeed}
         onClearAll={async () => { await finance.handleClearAll(); debts.clearDebts(); }}
-        onSignOut={() => supabase.auth.signOut()}
+        onSignOut={async () => { setSigningOut(true); await supabase.auth.signOut(); }}
         userEmail={session.user.email ?? ''}
         userName={userName}
         onUpdateName={async (name) => {
@@ -383,7 +401,15 @@ const App = () => {
         onSetBudget={finance.setBudget}
         onRemoveBudget={finance.removeBudget}
         categoryData={categoryData}
+        monthIncome={monthIncome}
+        totalInARS={totalInARS}
       />
+
+      {signingOut && (
+        <div className="fa-signout" role="status" aria-live="polite">
+          <div className="fa-signout-chip"><FaDots size={9} /><span>Cerrando sesión…</span></div>
+        </div>
+      )}
     </div>
   );
 };

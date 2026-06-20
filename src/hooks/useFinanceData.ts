@@ -108,13 +108,18 @@ export const useFinanceData = (
   // --- Transferencias ---
 
   const insertTransfer = (fromId: string, toId: string, amount: number, date: string, note: string) => {
+    const fromAcc = accounts.find(a => a.id === fromId)!;
+    const toAcc   = accounts.find(a => a.id === toId)!;
+    const amountIn = fromAcc.currency === toAcc.currency
+      ? amount
+      : (amount * (fxRates[fromAcc.currency] ?? 1)) / (fxRates[toAcc.currency] ?? 1);
     const id1 = 't' + Date.now();
     const id2 = 't' + (Date.now() + 1);
-    const txOut: Transaction = { id: id1, date, accountId: fromId, categoryId: 'transfer', amount: -amount, note };
-    const txIn:  Transaction = { id: id2, date, accountId: toId,   categoryId: 'transfer', amount:  amount, note };
+    const txOut: Transaction = { id: id1, date, accountId: fromId, categoryId: 'transfer', amount: -amount,   note };
+    const txIn:  Transaction = { id: id2, date, accountId: toId,   categoryId: 'transfer', amount: amountIn,  note };
     const newAccounts = accounts.map(a => {
       if (a.id === fromId) return { ...a, balance: a.balance - amount };
-      if (a.id === toId)   return { ...a, balance: a.balance + amount };
+      if (a.id === toId)   return { ...a, balance: a.balance + amountIn };
       return a;
     });
     const prevAccounts     = accounts;

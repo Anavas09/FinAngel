@@ -1,15 +1,16 @@
 import { useRef, useState } from 'react';
 import { fmtMoney } from '../../data/utils';
-import type { Account } from '../../types';
+import type { Account, Currency } from '../../types';
 
 interface TransferModalProps {
   accounts: Account[];
+  fxRates: Record<Currency, number>;
   onClose: () => void;
   onSave: (fromId: string, toId: string, amount: number, date: string, note: string) => void;
   privacy: boolean;
 }
 
-export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferModalProps) => {
+export const TransferModal = ({ accounts, fxRates, onClose, onSave, privacy }: TransferModalProps) => {
   const [fromId, setFromId] = useState(accounts[0]?.id ?? '');
   const [toId, setToId]     = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
   const [amount, setAmount] = useState('');
@@ -19,6 +20,13 @@ export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferMo
   const amountRef = useRef<HTMLInputElement>(null);
 
   const fromAccount = accounts.find(a => a.id === fromId);
+  const toAccount   = accounts.find(a => a.id === toId);
+
+  const parsedAmount = parseFloat(amount.replace(',', '.'));
+  const convertedHint =
+    fromAccount && toAccount && fromAccount.currency !== toAccount.currency && !isNaN(parsedAmount) && parsedAmount > 0
+      ? (parsedAmount * (fxRates[fromAccount.currency] ?? 1)) / (fxRates[toAccount.currency] ?? 1)
+      : null;
 
   const setError = () => { setAmountError(true); amountRef.current?.focus(); };
 
@@ -110,6 +118,11 @@ export const TransferModal = ({ accounts, onClose, onSave, privacy }: TransferMo
                 {fromAccount && parseFloat(amount.replace(',', '.')) > fromAccount.balance
                   ? `Saldo insuficiente${!privacy ? ` (disponible: ${fmtMoney(fromAccount.balance, fromAccount.currency, false)})` : ''}`
                   : 'Ingresá un monto válido mayor a cero'}
+              </span>
+            )}
+            {!amountError && convertedHint !== null && toAccount && (
+              <span style={{ fontSize: 11, color: 'var(--text-soft, #888)', marginTop: 4, display: 'block' }}>
+                ≈ {fmtMoney(convertedHint, toAccount.currency, false)} en destino
               </span>
             )}
           </label>
