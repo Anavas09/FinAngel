@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CATEGORIES } from '../../data/constants';
+import { BudgetAlert } from '../ui/BudgetAlert';
 import type { Budget, ChartDataItem, Tweaks } from '../../types';
 
 interface SettingsPanelProps {
@@ -15,6 +16,8 @@ interface SettingsPanelProps {
   onSetBudget: (categoryId: string, amount: number) => void;
   onRemoveBudget: (categoryId: string) => void;
   categoryData: ChartDataItem[];
+  monthIncome: number;
+  totalInARS: number;
 }
 
 interface RowProps {
@@ -29,7 +32,7 @@ interface ToggleBtnProps {
 
 const ACCENT_COLORS = ['#FF5C4D', '#5BB890', '#7EC4F2', '#D4C5F9', '#F2C94C'];
 
-export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail, userName, onUpdateName, budgets, onSetBudget, onRemoveBudget, categoryData }: SettingsPanelProps) => {
+export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSignOut, userEmail, userName, onUpdateName, budgets, onSetBudget, onRemoveBudget, categoryData, monthIncome, totalInARS }: SettingsPanelProps) => {
   const [open, setOpen] = useState(false);
   const [editName, setEditName] = useState(userName);
   const [savingName, setSavingName] = useState(false);
@@ -50,6 +53,13 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
   }, [budgets]);
 
   const expenseCats = CATEGORIES.filter(c => c.id !== 'ingreso' && c.id !== 'transfer');
+
+  const totalBudgeted = budgets.reduce((s, b) => s + b.amount, 0);
+  const budgetAlert =
+    budgets.length === 0               ? null :
+    totalBudgeted > totalInARS         ? 'critical' :
+    monthIncome > 0 && totalBudgeted > monthIncome ? 'warning' :
+    null;
 
   return (
     <>
@@ -214,6 +224,9 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
 
             <div style={{ borderTop: '2px dashed var(--line-soft, #DBCFB4)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--ink, #1D1A18)' }}>Presupuestos mensuales (ARS)</div>
+              {budgetAlert && (
+                <BudgetAlert level={budgetAlert} totalBudgeted={totalBudgeted} totalInARS={totalInARS} monthIncome={monthIncome} />
+              )}
               {expenseCats.map(c => {
                 const saved = budgets.find(b => b.categoryId === c.id);
                 const val = budgetInputs[c.id] ?? '';

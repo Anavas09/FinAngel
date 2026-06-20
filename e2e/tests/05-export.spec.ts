@@ -95,13 +95,16 @@ test('CSV sanitiza fórmulas (inyección CSV)', async ({ withSeed: app }) => {
   expect(content).not.toMatch(/"=SUM\(1\+1\)"/); // sin el prefijo sería inyectable
 });
 
-test('botón PDF llama a window.print', async ({ withSeed: app }) => {
+test('botón PDF llama a window.print y usa nombre con fecha', async ({ withSeed: app }) => {
   await app.openExport();
 
-  // Reemplaza window.print con un spy antes de hacer clic
   await app.page.evaluate(() => {
     (window as unknown as Record<string, unknown>).__printCalled = false;
-    window.print = () => { (window as unknown as Record<string, unknown>).__printCalled = true; };
+    (window as unknown as Record<string, unknown>).__printTitle = '';
+    window.print = () => {
+      (window as unknown as Record<string, unknown>).__printCalled = true;
+      (window as unknown as Record<string, unknown>).__printTitle = document.title;
+    };
   });
 
   await app.page.locator('.fa-modal').getByRole('button', { name: /PDF/i }).click();
@@ -110,4 +113,23 @@ test('botón PDF llama a window.print', async ({ withSeed: app }) => {
     () => (window as unknown as Record<string, unknown>).__printCalled
   );
   expect(called).toBe(true);
+
+  const title = await app.page.evaluate(
+    () => (window as unknown as Record<string, unknown>).__printTitle as string
+  );
+  expect(title).toMatch(/^FinAngel — Resumen \d{4}-\d{2}-\d{2}$/);
+});
+
+test('PDF exportado tiene 1 sola página', async ({ withSeed: app }) => {
+  await app.openExport();
+
+  // page.pdf() aplica @media print y genera el PDF real
+  const pdf = await app.page.pdf({ format: 'A4' });
+
+  // En PDFs de Chrome, el objeto /Pages contiene /Count N con el total de páginas
+  const text = pdf.toString('latin1');
+  const match = text.match(/\/Type\s*\/Pages[\s\S]{0,200}?\/Count\s+(\d+)/);
+  const pageCount = match ? parseInt(match[1]) : -1;
+
+  expect(pageCount).toBe(1);
 });

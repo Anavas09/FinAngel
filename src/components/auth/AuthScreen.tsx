@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { FinAngel } from '../mascot/Mascot';
+import { FaDots } from '../ui/Dots';
 
 export const AuthScreen = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -110,10 +111,11 @@ export const AuthScreen = () => {
           <button
             type="submit"
             className="fa-btn fa-btn-primary"
-            style={{ width: '100%', marginTop: 4 }}
+            style={{ width: '100%', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
             disabled={loading}
           >
-            {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : 'Registrarse'}
+            {loading && <FaDots size={7} tone="white" />}
+            <span>{loading ? (mode === 'login' ? 'Entrando…' : 'Creando tu cuenta…') : (mode === 'login' ? 'Iniciar sesión' : 'Registrarse')}</span>
           </button>
         </form>
 

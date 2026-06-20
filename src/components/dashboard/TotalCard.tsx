@@ -1,4 +1,5 @@
 import { EyeToggle } from '../ui/EyeToggle';
+import { BudgetAlert } from '../ui/BudgetAlert';
 import { fmtMoney } from '../../data/utils';
 import type { Currency } from '../../types';
 
@@ -8,6 +9,9 @@ interface TotalCardProps {
   privacy: boolean;
   setPrivacy: (v: boolean) => void;
   monthNet: number;
+  budgetAlert?: 'critical' | 'warning' | null;
+  totalBudgeted?: number;
+  monthIncome?: number;
 }
 
 const DecorBlobs = () => (
@@ -18,7 +22,7 @@ const DecorBlobs = () => (
   </svg>
 );
 
-export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet }: TotalCardProps) => {
+export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet, budgetAlert, totalBudgeted, monthIncome }: TotalCardProps) => {
   const positive = monthNet >= 0;
   return (
     <section className="fa-total">
@@ -43,6 +47,11 @@ export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet }: T
             </div>
           ))}
       </div>
+      {budgetAlert && totalBudgeted !== undefined && monthIncome !== undefined && (
+        <div style={{ padding: '0 16px 16px' }}>
+          <BudgetAlert level={budgetAlert} totalBudgeted={totalBudgeted} totalInARS={totalARS} monthIncome={monthIncome} />
+        </div>
+      )}
       <DecorBlobs />
     </section>
   );
