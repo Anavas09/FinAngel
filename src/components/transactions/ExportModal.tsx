@@ -58,7 +58,10 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
   };
 
   const downloadPDF = () => {
+    const prev = document.title;
+    document.title = `FinAngel — Resumen ${new Date().toISOString().slice(0, 10)}`;
     window.print();
+    document.title = prev;
     onToast('Listo para imprimir o guardar como PDF');
   };
 

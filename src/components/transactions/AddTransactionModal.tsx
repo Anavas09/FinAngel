@@ -51,8 +51,10 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
     if (!num || isNaN(num) || num <= 0) { setError(); return; }
     setAmountError(false);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-    if (kind === 'expense' && selectedAccount && num > selectedAccount.balance) {
-      setError(); return;
+    if (kind === 'expense' && selectedAccount) {
+      const isSameAccount = editing?.accountId === accountId;
+      const existingAmt = isSameAccount ? Math.abs(editing?.amount ?? 0) : 0;
+      if ((num - existingAmt) > selectedAccount.balance) { setError(); return; }
     }
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
@@ -116,7 +118,12 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
             </div>
             {amountError && (
               <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
-                {kind === 'expense' && selectedAccount && parseFloat(amount.replace(',', '.')) > selectedAccount.balance
+                {kind === 'expense' && selectedAccount && (() => {
+                  const n = parseFloat(amount.replace(',', '.'));
+                  const isSame = editing?.accountId === accountId;
+                  const existing = isSame ? Math.abs(editing?.amount ?? 0) : 0;
+                  return (n - existing) > selectedAccount.balance;
+                })()
                   ? `Saldo insuficiente${!privacy ? ` (disponible: ${fmtMoney(selectedAccount.balance, selectedAccount.currency, false)})` : ''}`
                   : 'Ingresá un monto válido mayor a cero'}
               </span>
