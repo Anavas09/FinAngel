@@ -165,6 +165,26 @@ export const useFinanceData = (
       const newAccounts = accounts.map(a =>
         a.id === newTx.accountId ? { ...a, balance: a.balance + newTx.amount } : a
       );
+
+      let toastMsg = 'Movimiento agregado';
+      if (newTx.amount < 0 && newTx.categoryId !== 'transfer') {
+        const budget = budgets.find(b => b.categoryId === newTx.categoryId);
+        if (budget) {
+          const ym  = new Date().toISOString().slice(0, 7);
+          const acc = accounts.find(a => a.id === newTx.accountId);
+          const rate = acc ? (fxRates[acc.currency] ?? 1) : 1;
+          const spentBefore = transactions
+            .filter(t => t.categoryId === newTx.categoryId && t.amount < 0 && t.date.startsWith(ym))
+            .reduce((sum, t) => {
+              const a = accounts.find(x => x.id === t.accountId);
+              return sum + Math.abs(t.amount) * (a ? (fxRates[a.currency] ?? 1) : 1);
+            }, 0);
+          if (spentBefore < budget.amount && spentBefore + Math.abs(newTx.amount) * rate >= budget.amount) {
+            toastMsg = `✓ Presupuesto de ${catById(newTx.categoryId).label} completado`;
+          }
+        }
+      }
+
       setTransactions(prev => [newTx, ...prev]);
       setAccounts(newAccounts);
       Promise.all([
@@ -175,7 +195,7 @@ export const useFinanceData = (
         setAccounts(accounts);
         showToast('Error al guardar el movimiento');
       });
-      showToast('Movimiento agregado');
+      showToast(toastMsg);
     }
   };
 

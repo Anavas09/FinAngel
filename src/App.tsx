@@ -128,6 +128,8 @@ const App = () => {
           budgetAlert={budgetAlert}
           totalBudgeted={totalBudgeted}
           monthIncome={monthIncome}
+          budgets={finance.budgets}
+          categoryData={categoryData}
         />
 
         <section className="fa-section">

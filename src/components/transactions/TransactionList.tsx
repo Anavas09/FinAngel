@@ -9,6 +9,33 @@ interface TransactionListProps {
   onEdit: (tx: Transaction) => void;
 }
 
+interface TransactionCardProps {
+  t: Transaction;
+  accounts: Account[];
+  privacy: boolean;
+  onEdit: (tx: Transaction) => void;
+}
+
+const TransactionCard = ({ t, accounts, privacy, onEdit }: TransactionCardProps) => {
+  const cat = catById(t.categoryId);
+  const acc = accounts.find(a => a.id === t.accountId);
+  const positive = t.amount >= 0;
+  return (
+    <div key={t.id} className="fa-tx" onClick={() => onEdit(t)}>
+      <div className="fa-tx-icon" style={{ background: `${cat.color}22`, color: cat.color }}>
+        <span>{cat.icon}</span>
+      </div>
+      <div className="fa-tx-text">
+        <span className="fa-tx-note">{t.note}</span>
+        <span className="fa-tx-meta">{cat.label} · {acc?.name}</span>
+      </div>
+      <div className="fa-tx-amount" data-positive={positive}>
+        {positive ? '+' : ''}{fmtMoney(t.amount, acc?.currency ?? 'ARS', privacy)}
+      </div>
+    </div>
+  );
+};
+
 export const TransactionList = ({ transactions, accounts, privacy, onEdit }: TransactionListProps) => {
   if (transactions.length === 0) {
     return (
@@ -30,25 +57,9 @@ export const TransactionList = ({ transactions, accounts, privacy, onEdit }: Tra
         <div key={date} className="fa-tx-group">
           <div className="fa-tx-date">{fmtDate(date)}</div>
           <div className="fa-tx-items">
-            {items.map((t) => {
-              const cat = catById(t.categoryId);
-              const acc = accounts.find(a => a.id === t.accountId);
-              const positive = t.amount >= 0;
-              return (
-                <div key={t.id} className="fa-tx" onClick={() => onEdit(t)}>
-                  <div className="fa-tx-icon" style={{ background: `${cat.color}22`, color: cat.color }}>
-                    <span>{cat.icon}</span>
-                  </div>
-                  <div className="fa-tx-text">
-                    <span className="fa-tx-note">{t.note}</span>
-                    <span className="fa-tx-meta">{cat.label} · {acc?.name}</span>
-                  </div>
-                  <div className="fa-tx-amount" data-positive={positive}>
-                    {positive ? '+' : ''}{fmtMoney(t.amount, acc?.currency ?? 'ARS', privacy)}
-                  </div>
-                </div>
-              );
-            })}
+            {items.map((t) => (
+              <TransactionCard key={t.id} t={t} accounts={accounts} privacy={privacy} onEdit={onEdit} />
+            ))}
           </div>
         </div>
       ))}

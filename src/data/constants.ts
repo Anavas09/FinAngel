@@ -14,6 +14,7 @@ export const CATEGORIES: Category[] = [
   { id: 'luz_gas',          label: 'Luz / Agua / Gas', color: '#F2C94C', icon: '💡' },
   { id: 'internet',         label: 'Internet / Tel.', color: '#7DD3FC', icon: '🌐' },
   { id: 'suscripciones',    label: 'Suscripciones',   color: '#C4B5FD', icon: '📱' },
+  { id: 'transporte',        label: 'Transporte',       color: '#60A5FA', icon: '🚌' },
   { id: 'salud',            label: 'Salud',           color: '#5BB890', icon: '🩺' },
   { id: 'entretenimiento',  label: 'Entretenimiento', color: '#D4C5F9', icon: '🎬' },
   { id: 'ahorro',           label: 'Ahorro',          color: '#F49B8A', icon: '🐷' },
