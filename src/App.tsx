@@ -1,15 +1,32 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { TopBar } from './components/layout/TopBar';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+import { AuthScreen } from './components/auth/AuthScreen';
+import { ChartCard } from './components/charts/ChartCard';
+import { AccountCard } from './components/dashboard/AccountCard';
 import { GreetingCard } from './components/dashboard/GreetingCard';
 import { TotalCard } from './components/dashboard/TotalCard';
-import { AccountCard } from './components/dashboard/AccountCard';
-import { ChartCard } from './components/charts/ChartCard';
-import { TransactionList } from './components/transactions/TransactionList';
+import { DebtList } from './components/debts/DebtList';
+import { TopBar } from './components/layout/TopBar';
+import { FinAngelMini } from './components/mascot/Mascot';
 import { SettingsPanel } from './components/settings/SettingsPanel';
+import { TransactionList } from './components/transactions/TransactionList';
+import { FaDots } from './components/ui/Dots';
+import { catById, fmtMoney } from './data/utils';
+import { useDebtsData } from './hooks/useDebtsData';
+import { useFinanceData } from './hooks/useFinanceData';
+import { useLiveFx } from './hooks/useLiveFx';
+import { useMascot } from './hooks/useMascot';
+import { useModalState } from './hooks/useModalState';
+import { useTheme } from './hooks/useTheme';
+import { useTweaks } from './hooks/useTweaks';
+import { supabase } from './lib/supabase';
+
+import type { DragEndEvent } from '@dnd-kit/core';
+import type { Session } from '@supabase/supabase-js';
+import type { Debt } from './types';
 
 const AddTransactionModal = lazy(() => import('./components/transactions/AddTransactionModal').then(m => ({ default: m.AddTransactionModal })));
 const TransferModal        = lazy(() => import('./components/transactions/TransferModal').then(m => ({ default: m.TransferModal })));
@@ -17,20 +34,6 @@ const AddAccountModal      = lazy(() => import('./components/accounts/AddAccount
 const ExportModal          = lazy(() => import('./components/transactions/ExportModal').then(m => ({ default: m.ExportModal })));
 const AddDebtModal         = lazy(() => import('./components/debts/AddDebtModal').then(m => ({ default: m.AddDebtModal })));
 const QuickPayDebtModal    = lazy(() => import('./components/debts/QuickPayDebtModal').then(m => ({ default: m.QuickPayDebtModal })));
-import type { Debt } from './types';
-import { AuthScreen } from './components/auth/AuthScreen';
-import { DebtList } from './components/debts/DebtList';
-import { FinAngelMini } from './components/mascot/Mascot';
-import { useTheme } from './hooks/useTheme';
-import { useTweaks } from './hooks/useTweaks';
-import { useFinanceData } from './hooks/useFinanceData';
-import { useDebtsData } from './hooks/useDebtsData';
-import { useModalState } from './hooks/useModalState';
-import { useMascot } from './hooks/useMascot';
-import { useLiveFx } from './hooks/useLiveFx';
-import { supabase } from './lib/supabase';
-import { fmtMoney } from './data/utils';
-import { FaDots } from './components/ui/Dots';
 
 const App = () => {
   const { theme, setTheme, selectedTheme, isAutoMode } = useTheme();
@@ -53,6 +56,7 @@ const App = () => {
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [txSearch, setTxSearch]             = useState('');
   const [txPeriod, setTxPeriod]             = useState('');
+  const [txKind, setTxKind]                 = useState<'' | 'income' | 'expense'>('');
   const [visibleTxCount, setVisibleTxCount] = useState(12);
 
   useEffect(() => {
@@ -88,14 +92,21 @@ const App = () => {
   const filteredTx = useMemo(() => {
     return finance.transactions.filter(t => {
       if (txPeriod && !t.date.startsWith(txPeriod)) return false;
+      if (txKind === 'income'  && t.amount <= 0) return false;
+      if (txKind === 'expense' && t.amount >= 0) return false;
       if (txSearch) {
         const q = txSearch.toLowerCase();
         const acc = finance.accounts.find(a => a.id === t.accountId);
-        if (!t.note.toLowerCase().includes(q) && !acc?.name.toLowerCase().includes(q)) return false;
+        const cat = catById(t.categoryId);
+        if (
+          !t.note.toLowerCase().includes(q) &&
+          !acc?.name.toLowerCase().includes(q) &&
+          !cat.label.toLowerCase().includes(q)
+        ) return false;
       }
       return true;
     });
-  }, [finance.transactions, finance.accounts, txPeriod, txSearch]);
+  }, [finance.transactions, finance.accounts, txPeriod, txSearch, txKind]);
 
   // --- Render guards ---
   if (session === undefined) return <Spinner />;
@@ -236,6 +247,16 @@ const App = () => {
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
+            <select
+              className="fa-input"
+              value={txKind}
+              onChange={e => { setTxKind(e.target.value as '' | 'income' | 'expense'); setVisibleTxCount(12); }}
+              style={{ fontSize: 13, minWidth: 90 }}
+            >
+              <option value="">Todos</option>
+              <option value="income">Ingresos</option>
+              <option value="expense">Gastos</option>
+            </select>
           </div>
           <TransactionList
             transactions={filteredTx.slice(0, visibleTxCount)}
@@ -339,6 +360,7 @@ const App = () => {
             accounts={accounts}
             transactions={transactions}
             totalARS={totalInARS}
+            kind={txKind}
             onClose={() => setExportOpen(false)}
             onToast={showToast}
           />

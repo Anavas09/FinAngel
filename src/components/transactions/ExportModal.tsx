@@ -1,25 +1,33 @@
 import { FinAngel, FinAngelMini } from '../mascot/Mascot';
-import { catById, fmtMoney, fmtDate } from '../../data/utils';
 import { FX_TO_ARS } from '../../data/constants';
+import { catById, fmtDate, fmtMoney } from '../../data/utils';
+
 import type { Account, Transaction } from '../../types';
 
 interface ExportModalProps {
   accounts: Account[];
   transactions: Transaction[];
   totalARS: number;
+  kind?: '' | 'income' | 'expense';
   onClose: () => void;
   onToast: (msg: string) => void;
 }
 
-export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast }: ExportModalProps) => {
-  const totalIn = transactions
+export const ExportModal = ({ accounts, transactions, totalARS, kind, onClose, onToast }: ExportModalProps) => {
+  const effectiveTxs = kind === 'income'
+    ? transactions.filter(t => t.amount > 0)
+    : kind === 'expense'
+    ? transactions.filter(t => t.amount < 0)
+    : transactions;
+
+  const totalIn = effectiveTxs
     .filter(t => t.amount > 0)
     .reduce((s, t) => {
       const a = accounts.find(x => x.id === t.accountId);
       return s + t.amount * (a ? FX_TO_ARS[a.currency] : 0);
     }, 0);
 
-  const totalOut = transactions
+  const totalOut = effectiveTxs
     .filter(t => t.amount < 0)
     .reduce((s, t) => {
       const a = accounts.find(x => x.id === t.accountId);
@@ -29,10 +37,12 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
   const sanitizeCell = (val: string) =>
     /^[=+\-@\t\r]/.test(val) ? `'${val}` : val;
 
+  const kindSuffix = kind === 'income' ? '-ingresos' : kind === 'expense' ? '-egresos' : '';
+
   const downloadCSV = () => {
     const rows: (string | number)[][] = [
       ['Fecha', 'Cuenta', 'Moneda', 'Categoría', 'Nota', 'Monto'],
-      ...transactions.map(t => {
+      ...effectiveTxs.map(t => {
         const a = accounts.find(x => x.id === t.accountId);
         return [
           t.date,
@@ -49,7 +59,7 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `finangel-resumen-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `finangel-resumen-${new Date().toISOString().slice(0, 10)}${kindSuffix}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -59,7 +69,8 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
 
   const downloadPDF = () => {
     const prev = document.title;
-    document.title = `FinAngel — Resumen ${new Date().toISOString().slice(0, 10)}`;
+    const kindLabel = kind === 'income' ? ' Ingresos' : kind === 'expense' ? ' Egresos' : '';
+    document.title = `FinAngel — Resumen${kindLabel} ${new Date().toISOString().slice(0, 10)}`;
     window.print();
     document.title = prev;
     onToast('Listo para imprimir o guardar como PDF');
@@ -114,7 +125,7 @@ export const ExportModal = ({ accounts, transactions, totalARS, onClose, onToast
               </tr>
             </thead>
             <tbody>
-              {transactions.map(t => {
+              {effectiveTxs.map(t => {
                 const a = accounts.find(x => x.id === t.accountId);
                 const cat = catById(t.categoryId);
                 return (
