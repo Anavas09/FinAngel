@@ -1,5 +1,6 @@
 import { Donut } from './Donut';
 import { fmtMoney } from '../../data/utils';
+
 import type { Budget, ChartDataItem } from '../../types';
 
 interface ChartCardProps {

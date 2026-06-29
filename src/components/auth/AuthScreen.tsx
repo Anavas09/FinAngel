@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { FinAngel } from '../mascot/Mascot';
+
 import { FaDots } from '../ui/Dots';
+import { FinAngel } from '../mascot/Mascot';
+import { supabase } from '../../lib/supabase';
 
 export const AuthScreen = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');

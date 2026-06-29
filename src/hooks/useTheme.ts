@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
 import type { ThemeConfig, ThemeKey } from '../types';
 
 type RealThemeKey = Exclude<ThemeKey, 'auto'>;

@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import { useEffect, useMemo, useState } from 'react';
+
 import { fetchDebts, insertDebt, updateDebt, deleteDebtById } from '../lib/db';
 import { loadOrder, saveOrder, applyOrder } from '../data/utils';
+
+import type { Session } from '@supabase/supabase-js';
 import type { Currency, Debt, DebtInput } from '../types';
 
 const DEBT_ORDER_KEY = 'finangel:debt-order';

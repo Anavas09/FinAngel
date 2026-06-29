@@ -1,5 +1,6 @@
 import { FinAngel } from '../mascot/Mascot';
-import { catById, fmtMoney, fmtDate } from '../../data/utils';
+import { catById, fmtDate, fmtMoney } from '../../data/utils';
+
 import type { Account, Transaction } from '../../types';
 
 interface TransactionListProps {

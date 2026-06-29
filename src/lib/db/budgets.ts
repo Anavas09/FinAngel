@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+
 import type { Budget } from '../../types';
 
 export const fetchBudgets = async (): Promise<Budget[]> => {

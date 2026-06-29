@@ -1,9 +1,11 @@
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Debt, DebtInput } from '../../types';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
 import { fmtMoney, fmtDate } from '../../data/utils';
+
+import type { DragEndEvent } from '@dnd-kit/core';
+import type { Debt, DebtInput } from '../../types';
 
 interface DebtListProps {
   debts: Debt[];

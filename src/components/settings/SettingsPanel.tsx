@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
 import { CATEGORIES } from '../../data/constants';
 import { BudgetAlert } from '../ui/BudgetAlert';
+
 import type { Budget, ChartDataItem, Tweaks } from '../../types';
 
 interface SettingsPanelProps {

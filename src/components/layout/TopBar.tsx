@@ -1,6 +1,8 @@
 import { useState } from 'react';
+
 import { FinAngelMini } from '../mascot/Mascot';
 import { THEMES } from '../../hooks/useTheme';
+
 import type { ThemeKey } from '../../types';
 
 interface TopBarProps {

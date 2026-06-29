@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+
 import { MASCOT_COPY } from '../data/constants';
+
 import type { MascotMood, MascotPersonality, MascotState } from '../types';
 
 interface UseMascotResult {

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+
 import type { Account } from '../../types';
 
 interface AccountRow {

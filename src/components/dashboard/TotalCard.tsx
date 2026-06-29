@@ -1,6 +1,7 @@
-import { EyeToggle } from '../ui/EyeToggle';
 import { BudgetAlert } from '../ui/BudgetAlert';
+import { EyeToggle } from '../ui/EyeToggle';
 import { fmtMoney } from '../../data/utils';
+
 import type { Budget, ChartDataItem, Currency } from '../../types';
 
 interface TotalCardProps {

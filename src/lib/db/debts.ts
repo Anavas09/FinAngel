@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+
 import type { Debt } from '../../types';
 
 interface DebtRow {

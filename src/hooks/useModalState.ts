@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+
 import type { DebtInput, TransactionInput } from '../types';
 
 export interface ModalState {
