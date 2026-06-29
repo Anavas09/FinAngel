@@ -1,4 +1,5 @@
 import { FinAngel } from '../mascot/Mascot';
+
 import type { Layout, MascotState } from '../../types';
 
 interface GreetingCardProps {
@@ -15,6 +16,10 @@ const greetingTime = (): string => {
   if (h < 19) return 'Buenas tardes';
   return 'Buenas noches';
 };
+
+const currentMonthYear = (): string =>
+  new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+    .replace(/^\w/, c => c.toUpperCase());
 
 const layoutLabel = (l: Layout): string =>
   l === 'compact' ? 'Vista compacta' : l === 'stacked' ? 'Vista apilada' : 'Vista normal';
@@ -47,7 +52,7 @@ export const GreetingCard = ({ mood, line, layout, userName }: GreetingCardProps
         <span className="fa-greeting-eyebrow">{greetingTime()}{userName ? `, ${userName}` : ''} 👋</span>
         <h1 className="fa-greeting-title">{line}</h1>
         <div className="fa-greeting-chips">
-          <span className="fa-chip">📅 Mayo 2026</span>
+          <span className="fa-chip">📅 {currentMonthYear()}</span>
           <span className="fa-chip">📊 {layoutLabel(layout)}</span>
         </div>
       </div>

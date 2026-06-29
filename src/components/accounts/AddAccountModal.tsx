@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import type { Account, AccountKind, Currency } from '../../types';
 
 interface AddAccountModalProps {
@@ -55,6 +56,7 @@ export const AddAccountModal = ({ onClose, onSave }: AddAccountModalProps) => {
                   key={e} type="button"
                   onClick={() => setEmoji(e)}
                   style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
                     fontSize: 22, width: 40, height: 40,
                     border: emoji === e ? '2px solid var(--ink, #1D1A18)' : '2px solid var(--line-soft, #DBCFB4)',
                     borderRadius: 10, background: emoji === e ? 'var(--bg-elev, #fff)' : 'transparent',
