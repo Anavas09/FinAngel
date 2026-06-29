@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
+
 import { CATEGORIES } from '../../data/constants';
 import { fmtMoney } from '../../data/utils';
+
 import type { Account, Debt, Transaction, TransactionInput } from '../../types';
 
 interface AddTransactionModalProps {

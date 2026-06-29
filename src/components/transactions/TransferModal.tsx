@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
+
 import { fmtMoney } from '../../data/utils';
+
 import type { Account, Currency } from '../../types';
 
 interface TransferModalProps {
