@@ -12,7 +12,9 @@
       "Bash(Sort-Object FullName)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\angel\\\\OneDrive\\\\Documentos\\\\React\\\\FinAngel\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "mcp__playwright__browser_navigate",
+      "Bash(npx @playwright/mcp install-browser chrome-for-testing)"
     ]
   },
   "enableAllProjectMcpServers": true,
