@@ -159,7 +159,7 @@ Plan completo en `ledger-upgrade-plan.md`. Estado actual:
 
 - **Fase 1 — Supabase SQL** ✅ completa: columnas `transfer_group`/`reverses_tx_id`/`created_at` en `transactions`; vista `account_balances`; tabla `audit_log` + trigger; RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente).
 - **Fase 2 — TypeScript** ✅ completa: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
-- **Fase 3 (opcional)**: trigger soft-immutability en Supabase; `updateTransaction` solo permite cambiar `note`/`category_id`.
+- **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date es demasiado fricción para app personal; las Fases 1+2 cubren el beneficio real.
 - **Fase 4 (futuro)**: migrar `amount FLOAT → BIGINT` (centavos × 100). Scope grande, no mezclar con las anteriores.
 
 ## Pending work (security hardening)
