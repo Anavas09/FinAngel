@@ -5,7 +5,7 @@ import { catById } from '../data/constants';
 import { loadOrder, saveOrder, applyOrder } from '../data/utils';
 import {
   fetchAccounts, fetchTransactions, fetchBudgets, seedUserData, clearUserData,
-  insertAccount, insertTransaction, updateTransaction, deleteTransactionById,
+  insertAccount, insertTransaction, insertTransferRpc, updateTransaction, deleteTransactionById,
   updateAccountBalance, updateAccountVisibility, deleteAccountById,
   upsertBudget, deleteBudget,
 } from '../lib/db';
@@ -42,12 +42,9 @@ export const useFinanceData = (
         setAccounts(updatedAccounts);
         setTransactions([...generated, ...txs]);
         setBudgets(bgs);
-        Promise.all([
-          ...generated.map(t => insertTransaction(t, session.user.id)),
-          ...updatedAccounts
-            .filter(a => generated.some(t => t.accountId === a.id))
-            .map(a => updateAccountBalance(a.id, a.balance)),
-        ]).catch(() => { setAccounts(accs); setTransactions(txs); });
+        Promise.all(
+          generated.map(t => insertTransaction(t, session.user.id)),
+        ).catch(() => { setAccounts(accs); setTransactions(txs); });
       })
       .finally(() => setLoading(false));
   }, [session?.user.id]);
@@ -115,8 +112,8 @@ export const useFinanceData = (
     const amountIn = fromAcc.currency === toAcc.currency
       ? amount
       : (amount * (fxRates[fromAcc.currency] ?? 1)) / (fxRates[toAcc.currency] ?? 1);
-    const id1 = 't' + Date.now();
-    const id2 = 't' + (Date.now() + 1);
+    const id1 = crypto.randomUUID();
+    const id2 = crypto.randomUUID();
     const txOut: Transaction = { id: id1, date, accountId: fromId, categoryId: 'transfer', amount: -amount,   note };
     const txIn:  Transaction = { id: id2, date, accountId: toId,   categoryId: 'transfer', amount: amountIn,  note };
     const newAccounts = accounts.map(a => {
@@ -128,12 +125,9 @@ export const useFinanceData = (
     const prevTransactions = transactions;
     setTransactions(prev => [txIn, txOut, ...prev]);
     setAccounts(newAccounts);
-    Promise.all([
-      insertTransaction(txOut, session!.user.id),
-      insertTransaction(txIn,  session!.user.id),
-      updateAccountBalance(fromId, newAccounts.find(a => a.id === fromId)!.balance),
-      updateAccountBalance(toId,   newAccounts.find(a => a.id === toId)!.balance),
-    ]).catch(() => {
+    insertTransferRpc(
+      session!.user.id, fromId, toId, amount, amountIn, date, note, id1, id2,
+    ).catch(() => {
       setTransactions(prevTransactions);
       setAccounts(prevAccounts);
       showToast('Error al registrar la transferencia');
@@ -163,7 +157,7 @@ export const useFinanceData = (
       });
       showToast('Movimiento actualizado');
     } else {
-      const newTx       = { ...tx, id: 't' + Date.now() } as Transaction;
+      const newTx       = { ...tx, id: crypto.randomUUID() } as Transaction;
       const newAccounts = accounts.map(a =>
         a.id === newTx.accountId ? { ...a, balance: a.balance + newTx.amount } : a
       );
@@ -189,10 +183,7 @@ export const useFinanceData = (
 
       setTransactions(prev => [newTx, ...prev]);
       setAccounts(newAccounts);
-      Promise.all([
-        insertTransaction(newTx, session!.user.id),
-        updateAccountBalance(newTx.accountId, newAccounts.find(a => a.id === newTx.accountId)!.balance),
-      ]).catch(() => {
+      insertTransaction(newTx, session!.user.id).catch(() => {
         setTransactions(transactions);
         setAccounts(accounts);
         showToast('Error al guardar el movimiento');
@@ -222,10 +213,7 @@ export const useFinanceData = (
     return () => {
       setTransactions(prevTransactions);
       setAccounts(prevAccounts);
-      Promise.all([
-        insertTransaction(tx, session!.user.id),
-        updateAccountBalance(tx.accountId, prevAccounts.find(a => a.id === tx.accountId)!.balance),
-      ]).catch(() => {
+      insertTransaction(tx, session!.user.id).catch(() => {
         setTransactions(prev => prev.filter(t => t.id !== id));
         setAccounts(newAccounts);
         showToast('Error al restaurar el movimiento');

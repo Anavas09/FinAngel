@@ -13,7 +13,7 @@ export const seedUserData = async (userId: string): Promise<void> => {
 
   const { error: txErr } = await supabase.from('transactions').insert(
     TRANSACTIONS_SEED.map(t => ({
-      id: t.id, user_id: userId, account_id: t.accountId,
+      user_id: userId, account_id: t.accountId,
       category_id: t.categoryId, date: t.date, amount: t.amount, note: t.note,
     }))
   );
