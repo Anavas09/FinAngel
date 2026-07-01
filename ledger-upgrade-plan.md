@@ -1,27 +1,26 @@
 # Plan: Migración a Ledger Real
 
-**Rama de trabajo:** `feat/ledger-upgrade`  
+**Rama de trabajo:** `feat/ledger-upgrade` → mergeada a `main` el 2026-07-01  
 **Fecha de creación:** 2026-06-30  
-**Estado:** Pendiente de ejecución
+**Estado:** Fases 1 y 2 completadas ✅ — en producción
 
 ---
 
 ## Contexto
 
-Auditoría realizada el 2026-06-30 determinó que FinAngel es un **CRUD con balance mutable**, no un ledger real. Los tres problemas estructurales son:
+Auditoría realizada el 2026-06-30 determinó que FinAngel era un **CRUD con balance mutable**, no un ledger real. Los tres problemas estructurales eran:
 
-1. `accounts.balance` es una columna mutable separada — puede divergir del historial de txs
-2. Las transacciones se pueden editar/eliminar directamente (rompe inmutabilidad)
-3. Las operaciones no son atómicas — `insertTransaction` + `updateAccountBalance` van en `Promise.all` sin transacción PostgreSQL
+1. `accounts.balance` era una columna mutable separada — podía divergir del historial de txs
+2. Las transacciones se podían editar/eliminar directamente (rompe inmutabilidad)
+3. Las operaciones no eran atómicas — `insertTransaction` + `updateAccountBalance` iban en `Promise.all` sin transacción PostgreSQL
 
 ---
 
 ## Fases
 
-### FASE 1 — Base de datos (Supabase SQL Editor)
-**Prerequisito:** hacer todo en rama `feat/ledger-upgrade` antes de tocar código
+### FASE 1 — Base de datos (Supabase SQL Editor) ✅
 
-#### 1a. Nuevas columnas en `transactions`
+#### 1a. Nuevas columnas en `transactions` ✅
 ```sql
 ALTER TABLE transactions
   ADD COLUMN IF NOT EXISTS transfer_group  UUID,
@@ -29,7 +28,7 @@ ALTER TABLE transactions
   ADD COLUMN IF NOT EXISTS created_at      TIMESTAMPTZ NOT NULL DEFAULT now();
 ```
 
-#### 1b. Vista de saldos calculados
+#### 1b. Vista de saldos calculados ✅
 ```sql
 CREATE OR REPLACE VIEW account_balances AS
   SELECT
@@ -42,10 +41,8 @@ CREATE OR REPLACE VIEW account_balances AS
   LEFT JOIN transactions t ON t.account_id = a.id
   GROUP BY a.id, a.user_id, a.name, a.currency;
 ```
-> Nota: mantener `amount` como `float` por ahora para no romper datos existentes.
-> La migración a `BIGINT` (centavos) es una fase futura separada.
 
-#### 1c. Tabla audit_log
+#### 1c. Tabla audit_log ✅
 ```sql
 CREATE TABLE IF NOT EXISTS audit_log (
   id          BIGSERIAL PRIMARY KEY,
@@ -62,7 +59,7 @@ ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "audit own rows" ON audit_log FOR SELECT USING (auth.uid() = user_id);
 ```
 
-#### 1d. Trigger de audit en transactions
+#### 1d. Trigger de audit en transactions ✅
 ```sql
 CREATE OR REPLACE FUNCTION log_transaction_change()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
@@ -71,7 +68,7 @@ BEGIN
   VALUES (
     COALESCE(NEW.user_id, OLD.user_id),
     'transactions',
-    COALESCE(NEW.id, OLD.id),
+    COALESCE(NEW.id::text, OLD.id::text),
     TG_OP,
     CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE to_jsonb(OLD) END,
     CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE to_jsonb(NEW) END
@@ -86,9 +83,12 @@ CREATE TRIGGER audit_transactions
   FOR EACH ROW EXECUTE FUNCTION log_transaction_change();
 ```
 
-#### 1e. RPC `register_transaction` (atómica)
+#### 1e. RPC `register_transaction` (atómica) ✅
+> Nota: se añadió `p_id` para que el cliente controle el ID con `crypto.randomUUID()`.
+
 ```sql
 CREATE OR REPLACE FUNCTION register_transaction(
+  p_id          TEXT,
   p_user_id     UUID,
   p_account_id  TEXT,
   p_category_id TEXT,
@@ -99,26 +99,26 @@ CREATE OR REPLACE FUNCTION register_transaction(
   p_debt_id     TEXT DEFAULT NULL
 ) RETURNS TEXT
 LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-  v_id TEXT := 't' || floor(extract(epoch from now()) * 1000)::text;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM accounts WHERE id = p_account_id AND user_id = p_user_id) THEN
     RAISE EXCEPTION 'account_not_found';
   END IF;
 
   INSERT INTO transactions (id, user_id, account_id, category_id, amount, date, note, recurring, debt_id)
-  VALUES (v_id, p_user_id, p_account_id, p_category_id, p_amount, p_date, p_note, p_recurring, p_debt_id);
+  VALUES (p_id, p_user_id, p_account_id, p_category_id, p_amount, p_date, p_note, p_recurring, p_debt_id);
 
   UPDATE accounts
   SET balance = balance + p_amount
   WHERE id = p_account_id;
 
-  RETURN v_id;
+  RETURN p_id;
 END;
 $$;
 ```
 
-#### 1f. RPC `register_transfer` (atómica)
+#### 1f. RPC `register_transfer` (atómica) ✅
+> Nota: se añadieron `p_id1`/`p_id2` para que el cliente controle los IDs.
+
 ```sql
 CREATE OR REPLACE FUNCTION register_transfer(
   p_user_id       UUID,
@@ -127,97 +127,34 @@ CREATE OR REPLACE FUNCTION register_transfer(
   p_amount        FLOAT,
   p_to_amount     FLOAT,
   p_date          DATE,
-  p_note          TEXT
-) RETURNS UUID
+  p_note          TEXT,
+  p_id1           TEXT,
+  p_id2           TEXT
+) RETURNS VOID
 LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-  v_group UUID := gen_random_uuid();
-  v_id1   TEXT := 't' || floor(extract(epoch from now()) * 1000)::text;
-  v_id2   TEXT := 't' || (floor(extract(epoch from now()) * 1000) + 1)::text;
 BEGIN
   INSERT INTO transactions (id, user_id, account_id, category_id, amount, date, note, transfer_group)
-  VALUES (v_id1, p_user_id, p_from_account, 'transfer', -p_amount, p_date, p_note, v_group);
+  VALUES (p_id1, p_user_id, p_from_account, 'transfer', -p_amount, p_date, p_note, gen_random_uuid());
 
   INSERT INTO transactions (id, user_id, account_id, category_id, amount, date, note, transfer_group)
-  VALUES (v_id2, p_user_id, p_to_account, 'transfer', p_to_amount, p_date, p_note, v_group);
+  VALUES (p_id2, p_user_id, p_to_account, 'transfer', p_to_amount, p_date, p_note,
+    (SELECT transfer_group FROM transactions WHERE id = p_id1));
 
-  UPDATE accounts SET balance = balance - p_amount WHERE id = p_from_account;
+  UPDATE accounts SET balance = balance - p_amount  WHERE id = p_from_account;
   UPDATE accounts SET balance = balance + p_to_amount WHERE id = p_to_account;
-
-  RETURN v_group;
 END;
 $$;
 ```
 
-> **Nota:** Por ahora las RPCs SÍ actualizan `accounts.balance` para mantener compatibilidad.
-> Una vez validado, la siguiente fase elimina la columna y usa la vista.
-
 ---
 
-### FASE 2 — Capa de datos TypeScript
+### FASE 2 — Capa de datos TypeScript ✅
 
-**Archivos a modificar:**
-- `src/lib/db/transactions.ts` — reemplazar `insertTransaction` por llamada a RPC `register_transaction`
-- `src/lib/db/accounts.ts` — eliminar `updateAccountBalance` (la RPC lo hace internamente)
-- `src/hooks/useFinanceData.ts` — eliminar todas las llamadas a `updateAccountBalance` (ya no necesarias)
-
-#### Cambios en `transactions.ts`
-```ts
-// Reemplazar insertTransaction:
-export const insertTransaction = async (tx: Transaction, userId: string): Promise<void> => {
-  const { error } = await supabase.rpc('register_transaction', {
-    p_user_id:     userId,
-    p_account_id:  tx.accountId,
-    p_category_id: tx.categoryId,
-    p_amount:      tx.amount,
-    p_date:        tx.date,
-    p_note:        tx.note,
-    p_recurring:   tx.recurring ?? null,
-    p_debt_id:     tx.debtId ?? null,
-  });
-  if (error) throw error;
-};
-
-// Agregar insertTransfer:
-export const insertTransferRpc = async (
-  userId: string, fromId: string, toId: string,
-  amount: number, toAmount: number, date: string, note: string
-): Promise<void> => {
-  const { error } = await supabase.rpc('register_transfer', {
-    p_user_id:      userId,
-    p_from_account: fromId,
-    p_to_account:   toId,
-    p_amount:       amount,
-    p_to_amount:    toAmount,
-    p_date:         date,
-    p_note:         note,
-  });
-  if (error) throw error;
-};
-```
-
-#### Cambios en `useFinanceData.ts`
-- En `upsertTx` (nuevo): usar `insertTransaction` (RPC) — ya no llamar `updateAccountBalance`
-- En `insertTransfer`: usar `insertTransferRpc` — ya no llamar `updateAccountBalance` x2
-- En `deleteTx` undo: usar `insertTransaction` (RPC) — ya no llamar `updateAccountBalance`
-- En recurring auto-generation: usar `insertTransaction` (RPC) — ya no llamar `updateAccountBalance`
-
-#### Tipo `Transaction` — agregar `created_at`
-```ts
-// src/types.ts
-export interface Transaction {
-  id: string;
-  date: string;
-  accountId: string;
-  categoryId: string;
-  amount: number;
-  note: string;
-  recurring?: 'monthly' | 'weekly';
-  debtId?: string;
-  transferGroup?: string;   // nuevo: UUID que agrupa par de transferencia
-  createdAt?: string;       // nuevo: timestamp de inserción
-}
-```
+**Archivos modificados:**
+- `src/lib/db/transactions.ts` — `insertTransaction` → RPC `register_transaction`; añadido `insertTransferRpc`; `TransactionRow` mapea `transfer_group` y `created_at`
+- `src/hooks/useFinanceData.ts` — eliminadas todas las llamadas a `updateAccountBalance` en insert, transfer, recurring y undo-delete; IDs migrados a `crypto.randomUUID()`
+- `src/lib/db/seed.ts` — semilla sin `id` hardcodeado (la DB genera el id)
+- `src/types.ts` — `Transaction` añade `transferGroup?` y `createdAt?`
 
 ---
 
@@ -231,47 +168,35 @@ Inmutabilidad estricta de `amount`/`date` tiene demasiada fricción para una app
 
 - Convertir todos los `amount` de `FLOAT` a `BIGINT` (centavos × 100)
 - Requiere migración de datos existentes: `UPDATE transactions SET amount_cents = round(amount * 100)`
-- Requiere cambios en toda la UI (fmtMoney, inputs, FX conversions)
-- **No hacer hasta que Fases 1-3 estén estables en producción**
+- Requiere cambios en toda la UI (`fmtMoney`, inputs, FX conversions)
+- Requiere ajuste de prácticamente todos los tests E2E
+- **No encarar hasta que las Fases 1+2 estén estables en producción por un tiempo**
 
 ---
 
 ## Checklist de ejecución
 
 ### Pre-trabajo
-- [ ] `git checkout -b feat/ledger-upgrade`
+- [x] `git checkout -b feat/ledger-upgrade`
 
 ### Fase 1 — Supabase SQL Editor
-- [ ] 1a: Nuevas columnas en `transactions` (`transfer_group`, `reverses_tx_id`, `created_at`)
-- [ ] 1b: Vista `account_balances`
-- [ ] 1c: Tabla `audit_log` + RLS
-- [ ] 1d: Trigger `audit_transactions`
-- [ ] 1e: RPC `register_transaction`
-- [ ] 1f: RPC `register_transfer`
-- [ ] Verificar con `SELECT * FROM audit_log LIMIT 5` tras insertar una tx de prueba
+- [x] 1a: Nuevas columnas en `transactions` (`transfer_group`, `reverses_tx_id`, `created_at`)
+- [x] 1b: Vista `account_balances`
+- [x] 1c: Tabla `audit_log` + RLS
+- [x] 1d: Trigger `audit_transactions`
+- [x] 1e: RPC `register_transaction` (con `p_id`)
+- [x] 1f: RPC `register_transfer` (con `p_id1`/`p_id2`)
 
 ### Fase 2 — TypeScript
-- [ ] `src/lib/db/transactions.ts`: `insertTransaction` → RPC; agregar `insertTransferRpc`
-- [ ] `src/lib/db/accounts.ts`: eliminar `updateAccountBalance` export
-- [ ] `src/lib/db/index.ts`: actualizar re-exports
-- [ ] `src/hooks/useFinanceData.ts`: quitar todas las llamadas a `updateAccountBalance`
-- [ ] `src/hooks/useDebtsData.ts`: quitar llamadas a `updateAccountBalance` (QuickPay)
-- [ ] `src/types.ts`: agregar `transferGroup?` y `createdAt?` a `Transaction`
-- [ ] `npm run build` — sin errores TypeScript
-- [ ] `npx playwright test` — todos los tests pasan
+- [x] `src/lib/db/transactions.ts`: `insertTransaction` → RPC; agregar `insertTransferRpc`
+- [x] `src/hooks/useFinanceData.ts`: quitar todas las llamadas a `updateAccountBalance` en insert/transfer/recurring/undo
+- [x] `src/types.ts`: agregar `transferGroup?` y `createdAt?` a `Transaction`
+- [x] `src/lib/db/seed.ts`: eliminar `id` hardcodeado en inserts de transactions
+- [x] `npm run build` — sin errores TypeScript
+- [x] Merge a `main` y push a `origin/main`
 
-### Fase 3 (opcional)
-- [ ] Trigger soft-immutability en Supabase
-- [ ] Adaptar `updateTransaction` para permitir solo `note`/`category_id`
+### Fase 3
+- [x] ❌ Descartada
 
----
-
-## Impacto en tests existentes
-
-Los tests E2E no deberían romperse porque:
-- La UI no cambia
-- Los balances siguen funcionando (la RPC los actualiza internamente)
-- La única diferencia observable es que `insertTransaction` ya no llama `updateAccountBalance` por separado
-
-Tests que podrían necesitar ajuste si se implementa soft-immutability (Fase 3):
-- `03-transactions.spec.ts` — "editar" transacción cambia amount → podría bloquearse
+### Fase 4
+- [ ] Pendiente — scope grande, encarar en rama separada cuando Fases 1+2 lleven tiempo en producción

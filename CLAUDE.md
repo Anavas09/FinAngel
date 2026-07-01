@@ -153,14 +153,14 @@ El estado `txSearch`, `txPeriod`, `txKind` y `visibleTxCount` vive en `App.tsx` 
 
 React Native + Expo app with shared business logic. Repo: `C:\Users\angel\OneDrive\Documentos\React Native\FinAngel-Mobile` (has its own CLAUDE.md).
 
-## Ledger upgrade (rama `feat/ledger-upgrade`)
+## Ledger upgrade ✅ (en main desde 2026-07-01)
 
-Plan completo en `ledger-upgrade-plan.md`. Estado actual:
+Plan completo en `ledger-upgrade-plan.md`.
 
-- **Fase 1 — Supabase SQL** ✅ completa: columnas `transfer_group`/`reverses_tx_id`/`created_at` en `transactions`; vista `account_balances`; tabla `audit_log` + trigger; RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente).
-- **Fase 2 — TypeScript** ✅ completa: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
-- **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date es demasiado fricción para app personal; las Fases 1+2 cubren el beneficio real.
-- **Fase 4 (futuro)**: migrar `amount FLOAT → BIGINT` (centavos × 100). Scope grande, no mezclar con las anteriores.
+- **Fase 1 — Supabase SQL** ✅: columnas `transfer_group`/`reverses_tx_id`/`created_at` en `transactions`; vista `account_balances`; tabla `audit_log` + trigger; RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente).
+- **Fase 2 — TypeScript** ✅: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
+- **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date tiene demasiada fricción para app personal.
+- **Fase 4 (futuro)**: migrar `amount FLOAT → BIGINT` (centavos × 100). Scope grande — encarar en rama separada cuando Fases 1+2 lleven tiempo en producción.
 
 ## Pending work (security hardening)
 
