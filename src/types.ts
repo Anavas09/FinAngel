@@ -25,6 +25,8 @@ export interface Transaction {
   note: string;
   recurring?: 'monthly' | 'weekly';
   debtId?: string;
+  transferGroup?: string;
+  createdAt?: string;
 }
 
 export type TransactionInput = Omit<Transaction, 'id'> & { id?: string };
