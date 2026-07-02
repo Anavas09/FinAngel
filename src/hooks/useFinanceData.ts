@@ -19,6 +19,7 @@ export const useFinanceData = (
   session: Session | null,
   showToast: (msg: string) => void,
   fxRates: Record<Currency, number>,
+  period: string,
 ) => {
   const [accounts, setAccounts]         = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -261,17 +262,16 @@ export const useFinanceData = (
     [visibleAccounts, fxRates],
   );
 
-  const thisMonth = useMemo(() => {
-    const now = new Date();
-    const ym  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    return transactions.filter(
-      t => t.date.startsWith(ym) && accounts.find(a => a.id === t.accountId)?.visible
-    );
-  }, [transactions, accounts]);
+  const periodTxs = useMemo(() => {
+    return transactions.filter(t => {
+      if (period && !t.date.startsWith(period)) return false;
+      return accounts.find(a => a.id === t.accountId)?.visible ?? false;
+    });
+  }, [transactions, accounts, period]);
 
   const categoryData = useMemo<ChartDataItem[]>(() => {
     const byCat: Record<string, number> = {};
-    thisMonth.forEach(t => {
+    periodTxs.forEach(t => {
       if (t.amount >= 0 || t.categoryId === 'transfer') return;
       const a = accounts.find(x => x.id === t.accountId);
       byCat[t.categoryId] = (byCat[t.categoryId] ?? 0) + Math.abs(t.amount) * (a ? fxRates[a.currency] : 0);
@@ -282,11 +282,11 @@ export const useFinanceData = (
         return { id, value, label, color, icon };
       })
       .sort((a, b) => b.value - a.value);
-  }, [thisMonth, accounts, fxRates]);
+  }, [periodTxs, accounts, fxRates]);
 
   const flowData = useMemo<ChartDataItem[]>(() => {
     let inc = 0, exp = 0;
-    thisMonth.forEach(t => {
+    periodTxs.forEach(t => {
       if (t.categoryId === 'transfer') return;
       const a   = accounts.find(x => x.id === t.accountId);
       const ars = t.amount * (a ? fxRates[a.currency] : 0);
@@ -296,7 +296,7 @@ export const useFinanceData = (
       { id: 'inc', label: 'Ingresos', value: inc, color: '#5BB890', icon: '⬆' },
       { id: 'exp', label: 'Egresos',  value: exp, color: '#F26B5E', icon: '⬇' },
     ];
-  }, [thisMonth, accounts, fxRates]);
+  }, [periodTxs, accounts, fxRates]);
 
   const monthNet = flowData[0].value - flowData[1].value;
 

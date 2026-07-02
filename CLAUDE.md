@@ -44,7 +44,7 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 
 **Database layer** — `src/lib/db/` exports CRUD functions grouped by domain: `accounts.ts`, `transactions.ts`, `budgets.ts`, `seed.ts`. All calls use the Supabase client from `src/lib/supabase.ts` (env vars `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY`).
 
-**Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount, auto-generates recurring transactions, and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`.
+**Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount, auto-generates recurring transactions, and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`. Accepts a `period: string` (`YYYY-MM`) parameter — `categoryData` and `flowData` are filtered by that period (empty string = all). `txPeriod` in `App.tsx` defaults to the current month and is shared between the transaction list and both chart cards.
 
 **Theme system** — three CSS themes + an `auto` mode: `public/themes/{sticker,warm,night}.css` (plus `pastel.css` kept but not selectable). `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage. `ThemeKey = 'sticker' | 'warm' | 'night' | 'auto'`. Auto mode switches between `night` (18h–6h) and `warm` (6h–18h); stored as `'auto'` in localStorage. TopBar shows current effective theme label in auto mode.
 
@@ -135,7 +135,7 @@ e2e/
     14-ux-dots-fab.spec.ts         — tests de FaDots spinner y comportamiento del FAB
 ```
 
-**121 tests en total — ~115 pasan**. Fallos conocidos: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests; `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase. Tests de `09-charts` y el test de presupuesto en `06-settings` fallan cuando el seed data es de un mes anterior al actual (el filtro `thisMonth` no encuentra transacciones). Todos pasan en aislamiento o con seed data del mes corriente.
+**121 tests en total — ~115 pasan**. Fallos conocidos: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests; `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase. Tests de `09-charts` y el test de presupuesto en `06-settings` fallan cuando el seed data es de un mes anterior al actual (el filtro `periodTxs` con el período por defecto no encuentra transacciones). Todos pasan en aislamiento o con seed data del mes corriente.
 
 ### Notas de arquitectura de búsqueda/filtros
 

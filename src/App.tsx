@@ -55,7 +55,10 @@ const App = () => {
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [txSearch, setTxSearch]             = useState('');
-  const [txPeriod, setTxPeriod]             = useState('');
+  const [txPeriod, setTxPeriod]             = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [txKind, setTxKind]                 = useState<'' | 'income' | 'expense'>('');
   const [visibleTxCount, setVisibleTxCount] = useState(12);
 
@@ -74,7 +77,7 @@ const App = () => {
     [tweaks.fxUSD, tweaks.fxUSDT],
   );
 
-  const finance = useFinanceData(session ?? null, showToast, fxRates);
+  const finance = useFinanceData(session ?? null, showToast, fxRates, txPeriod);
   const debts   = useDebtsData(session ?? null, showToast, fxRates);
 
   const dndSensors = useSensors(
@@ -200,7 +203,7 @@ const App = () => {
         <section className="fa-section fa-charts">
           <ChartCard
             title="¿En qué se va la plata?"
-            sub="Gastos por categoría este mes"
+            sub={txPeriod ? `Gastos por categoría — ${txPeriod}` : 'Gastos por categoría — todos los períodos'}
             data={categoryData}
             centerLabel="Total gastado"
             centerValue={fmtMoney(categoryData.reduce((s, d) => s + d.value, 0), 'ARS', privacy)}
@@ -211,7 +214,7 @@ const App = () => {
           />
           <ChartCard
             title="Ingresos vs Egresos"
-            sub="Movimiento del mes en curso"
+            sub={txPeriod ? `Movimiento — ${txPeriod}` : 'Movimiento — todos los períodos'}
             data={flowData}
             centerLabel="Balance"
             centerValue={fmtMoney(monthNet, 'ARS', privacy)}
