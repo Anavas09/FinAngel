@@ -2,7 +2,7 @@ import { BudgetAlert } from '../ui/BudgetAlert';
 import { EyeToggle } from '../ui/EyeToggle';
 import { fmtMoney } from '../../data/utils';
 
-import type { Budget, ChartDataItem, Currency } from '../../types';
+import type { Currency } from '../../types';
 
 interface TotalCardProps {
   totalARS: number;
@@ -13,36 +13,7 @@ interface TotalCardProps {
   budgetAlert?: 'critical' | 'warning' | null;
   totalBudgeted?: number;
   monthIncome?: number;
-  budgets?: Budget[];
-  categoryData?: ChartDataItem[];
 }
-
-const BudgetChips = ({ budgets, categoryData }: { budgets: Budget[]; categoryData: ChartDataItem[] }) => {
-  const fulfilled = budgets
-    .map(b => ({ b, cat: categoryData.find(d => d.id === b.categoryId) }))
-    .filter(({ b, cat }) => cat && cat.value >= b.amount);
-
-  if (fulfilled.length === 0) return null;
-
-  return (
-    <div style={{ gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 16px 16px' }}>
-      {fulfilled.map(({ b, cat }) => {
-        const over = cat!.value > b.amount * 1.1;
-        return (
-          <span key={b.categoryId} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-            background: over ? '#C13B3B22' : '#5BB89022',
-            color: over ? '#C13B3B' : '#5BB890',
-            border: `1px solid ${over ? '#C13B3B55' : '#5BB89055'}`,
-          }}>
-            {cat!.icon} {cat!.label} {over ? '⚠' : '✓'}
-          </span>
-        );
-      })}
-    </div>
-  );
-};
 
 const DecorBlobs = () => (
   <svg className="fa-total-blobs" viewBox="0 0 400 200" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
@@ -52,7 +23,7 @@ const DecorBlobs = () => (
   </svg>
 );
 
-export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet, budgetAlert, totalBudgeted, monthIncome, budgets, categoryData }: TotalCardProps) => {
+export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet, budgetAlert, totalBudgeted, monthIncome }: TotalCardProps) => {
   const positive = monthNet >= 0;
   return (
     <section className="fa-total">
@@ -79,10 +50,9 @@ export const TotalCard = ({ totalARS, totals, privacy, setPrivacy, monthNet, bud
       </div>
       {budgetAlert && totalBudgeted !== undefined && monthIncome !== undefined && (
         <div style={{ padding: '0 16px 16px' }}>
-          <BudgetAlert level={budgetAlert} totalBudgeted={totalBudgeted} totalInARS={totalARS} monthIncome={monthIncome} />
+          <BudgetAlert level={budgetAlert} totalBudgeted={totalBudgeted} totalInARS={totalARS} monthIncome={monthIncome} amountLabel="Por gastar" />
         </div>
       )}
-      {budgets && categoryData && <BudgetChips budgets={budgets} categoryData={categoryData} />}
       <DecorBlobs />
     </section>
   );

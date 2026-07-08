@@ -5,9 +5,10 @@ interface BudgetAlertProps {
   totalBudgeted: number;
   totalInARS: number;
   monthIncome: number;
+  amountLabel?: string;
 }
 
-export const BudgetAlert = ({ level, totalBudgeted, totalInARS, monthIncome }: BudgetAlertProps) => (
+export const BudgetAlert = ({ level, totalBudgeted, totalInARS, monthIncome, amountLabel = 'Presupuestado' }: BudgetAlertProps) => (
   <div style={{
     background: level === 'critical' ? '#FDECEA' : '#FFF4E5',
     color: level === 'critical' ? '#C13B3B' : '#E07B00',
@@ -18,7 +19,7 @@ export const BudgetAlert = ({ level, totalBudgeted, totalInARS, monthIncome }: B
       {level === 'critical' ? '🚨 Superás tu patrimonio total' : '⚠️ Superás tus ingresos del mes'}
     </span>
     <span style={{ opacity: 0.85 }}>
-      Presupuestado: {fmtMoney(totalBudgeted, 'ARS', false)} ·{' '}
+      {amountLabel}: {fmtMoney(totalBudgeted, 'ARS', false)} ·{' '}
       {level === 'critical'
         ? `Patrimonio: ${fmtMoney(totalInARS, 'ARS', false)}`
         : `Ingresos: ${fmtMoney(monthIncome, 'ARS', false)}`}

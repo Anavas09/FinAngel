@@ -119,9 +119,12 @@ const App = () => {
   const { accounts, transactions, visibleAccounts, totalsByCcy, totalInARS, categoryData, flowData, monthNet } = finance;
 
   const monthIncome   = flowData[0].value;
-  const totalBudgeted = finance.budgets.reduce((s, b) => s + b.amount, 0);
+  const totalBudgeted = finance.budgets.reduce((s, b) => {
+    const spent = categoryData.find(c => c.id === b.categoryId)?.value ?? 0;
+    return s + Math.max(0, b.amount - spent);
+  }, 0);
   const budgetAlert: 'critical' | 'warning' | null =
-    finance.budgets.length === 0                              ? null :
+    finance.budgets.length === 0 || totalBudgeted === 0      ? null :
     totalBudgeted > totalInARS                               ? 'critical' :
     monthIncome > 0 && totalBudgeted > monthIncome           ? 'warning' :
     null;
@@ -131,7 +134,14 @@ const App = () => {
       <TopBar onExport={() => setExportOpen(true)} theme={theme} setTheme={setTheme} selectedTheme={selectedTheme} isAutoMode={isAutoMode} />
 
       <main className="fa-main">
-        <GreetingCard mood={mascotMood} line={mascotLine} layout={layout} userName={userName} />
+        <GreetingCard
+          mood={mascotMood}
+          line={mascotLine}
+          layout={layout}
+          userName={userName}
+          budgets={finance.budgets}
+          categoryData={categoryData}
+        />
 
         <TotalCard
           totalARS={totalInARS}
@@ -142,8 +152,6 @@ const App = () => {
           budgetAlert={budgetAlert}
           totalBudgeted={totalBudgeted}
           monthIncome={monthIncome}
-          budgets={finance.budgets}
-          categoryData={categoryData}
         />
 
         <section className="fa-section">

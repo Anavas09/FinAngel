@@ -1,12 +1,14 @@
 import { FinAngel } from '../mascot/Mascot';
 
-import type { Layout, MascotState } from '../../types';
+import type { Budget, ChartDataItem, Layout, MascotState } from '../../types';
 
 interface GreetingCardProps {
   mood: MascotState;
   line: string;
   layout: Layout;
   userName?: string;
+  budgets?: Budget[];
+  categoryData?: ChartDataItem[];
 }
 
 const greetingTime = (): string => {
@@ -41,11 +43,18 @@ const SparklesDecor = () => (
   </svg>
 );
 
-export const GreetingCard = ({ mood, line, layout, userName }: GreetingCardProps) => {
+export const GreetingCard = ({ mood, line, layout, userName, budgets, categoryData }: GreetingCardProps) => {
   const moodColors: Partial<Record<MascotState, string>> = {
     happy: '#FFE9D6', celebrating: '#FFF1B8', worried: '#FFD9C7',
   };
   const moodColor = moodColors[mood] ?? '#FFE9D6';
+
+  const fulfilledBudgets = budgets && categoryData
+    ? budgets
+        .map(b => ({ b, cat: categoryData.find(d => d.id === b.categoryId) }))
+        .filter(({ b, cat }) => cat && cat.value >= b.amount)
+    : [];
+
   return (
     <section className="fa-greeting" style={{ '--mood-bg': moodColor } as React.CSSProperties}>
       <div className="fa-greeting-text">
@@ -55,6 +64,29 @@ export const GreetingCard = ({ mood, line, layout, userName }: GreetingCardProps
           <span className="fa-chip">📅 {currentMonthYear()}</span>
           <span className="fa-chip">📊 {layoutLabel(layout)}</span>
         </div>
+        {fulfilledBudgets.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.55, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Presupuesto pagado
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {fulfilledBudgets.map(({ b, cat }) => {
+                const over = cat!.value > b.amount * 1.1;
+                return (
+                  <span key={b.categoryId} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    background: over ? '#C13B3B22' : '#5BB89022',
+                    color: over ? '#C13B3B' : '#5BB890',
+                    border: `1px solid ${over ? '#C13B3B55' : '#5BB89055'}`,
+                  }}>
+                    {cat!.icon} {cat!.label} {over ? '⚠' : '✓'}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       <div className="fa-greeting-mascot">
         <div className="fa-greeting-mascot-bubble">

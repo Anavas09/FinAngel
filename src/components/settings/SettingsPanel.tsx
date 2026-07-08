@@ -56,10 +56,13 @@ export const SettingsPanel = ({ tweaks, setTweak, onLoadSeed, onClearAll, onSign
 
   const expenseCats = CATEGORIES.filter(c => c.id !== 'ingreso' && c.id !== 'transfer');
 
-  const totalBudgeted = budgets.reduce((s, b) => s + b.amount, 0);
+  const totalBudgeted = budgets.reduce((s, b) => {
+    const spent = categoryData.find(c => c.id === b.categoryId)?.value ?? 0;
+    return s + Math.max(0, b.amount - spent);
+  }, 0);
   const budgetAlert =
-    budgets.length === 0               ? null :
-    totalBudgeted > totalInARS         ? 'critical' :
+    budgets.length === 0 || totalBudgeted === 0 ? null :
+    totalBudgeted > totalInARS                  ? 'critical' :
     monthIncome > 0 && totalBudgeted > monthIncome ? 'warning' :
     null;
 
