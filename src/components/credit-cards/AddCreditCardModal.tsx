@@ -25,7 +25,7 @@ export const AddCreditCardModal = ({ editing, onClose, onSave, onUpdate }: AddCr
   const [closingDay, setClosingDay]  = useState('');
   const [dueDay, setDueDay]          = useState('');
   const [interest, setInterest]      = useState('');
-  const [minPct, setMinPct]          = useState('');
+  const [minAmt, setMinAmt]          = useState('');
   const [note, setNote]              = useState('');
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export const AddCreditCardModal = ({ editing, onClose, onSave, onUpdate }: AddCr
       setClosingDay(editing.closingDay != null ? String(editing.closingDay) : '');
       setDueDay(editing.dueDay != null ? String(editing.dueDay) : '');
       setInterest(editing.interestRate != null ? String(editing.interestRate) : '');
-      setMinPct(editing.minPaymentPct != null ? String(editing.minPaymentPct) : '');
+      setMinAmt(editing.minPayment != null ? String(editing.minPayment) : '');
       setNote(editing.note ?? '');
     }
   }, [editing]);
@@ -58,7 +58,7 @@ export const AddCreditCardModal = ({ editing, onClose, onSave, onUpdate }: AddCr
       closingDay: parseDay(closingDay),
       dueDay: parseDay(dueDay),
       interestRate: interest ? parseNum(interest) : undefined,
-      minPaymentPct: minPct ? parseNum(minPct) : undefined,
+      minPayment: minAmt ? parseNum(minAmt) : undefined,
       note: note.trim() || undefined,
     };
     if (editing?.id) {
@@ -174,15 +174,18 @@ export const AddCreditCardModal = ({ editing, onClose, onSave, onUpdate }: AddCr
             />
           </label>
 
-          <label className="fa-field">
-            <span className="fa-field-label">Pago mínimo % <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional, default 5%)</span></span>
-            <input
-              className="fa-input"
-              type="text" inputMode="decimal"
-              value={minPct}
-              onChange={e => setMinPct(e.target.value.replace(/[^0-9.,]/g, ''))}
-              placeholder="5"
-            />
+          <label className="fa-field fa-field-amount">
+            <span className="fa-field-label">Pago mínimo <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span></span>
+            <div className="fa-amount-input">
+              <span className="fa-amount-currency">{sym}</span>
+              <input
+                type="text" inputMode="decimal"
+                value={minAmt}
+                onChange={e => { if (e.target.value.replace(/[^0-9.,]/g, '').length <= 14) setMinAmt(e.target.value.replace(/[^0-9.,]/g, '')); }}
+                placeholder="0"
+              />
+              <span className="fa-amount-ccy">{currency}</span>
+            </div>
           </label>
 
           <label className="fa-field">

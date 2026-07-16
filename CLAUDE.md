@@ -94,8 +94,8 @@ src/components/
                 AddDebtModal        — create/edit debt form
                 QuickPayDebtModal   — quick payment: account+amount+date; auto-updates balance & remainingAmount
   credit-cards/ CreditCardList      — tarjetas con barra de utilización (verde/amarillo/rojo), alerta de interés mensual, cerrar/reabrir, drag-reorder
-                AddCreditCardModal  — create/edit: nombre, límite, saldo actual, días cierre/vencimiento, TNA, pago mínimo %
-                PayCreditCardModal  — pago rápido con calculadora de intereses en tiempo real (pago mínimo vs total)
+                AddCreditCardModal  — create/edit: nombre, límite, saldo actual, días cierre/vencimiento, TNA, pago mínimo (monto fijo en moneda de la tarjeta)
+                PayCreditCardModal  — pago rápido con calculadora de intereses en tiempo real (pago mínimo vs total); calculadora solo visible si `minPayment` está cargado; botón 💸 deshabilitado cuando `currentBalance > creditLimit`
   accounts/     AddAccountModal     — new account: kind, currency, color, emoji, balance
   mascot/       Mascot / MascotMini — SVG mascot, 6 mood states
   settings/     SettingsPanel       — theme, personality, layout, FX rates, budgets, sign out

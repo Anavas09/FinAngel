@@ -100,7 +100,7 @@ export interface CreditCard {
   interestRate?: number;
   closingDay?: number;
   dueDay?: number;
-  minPaymentPct?: number;
+  minPayment?: number;
   note?: string;
   status: 'active' | 'closed';
   createdAt: string;

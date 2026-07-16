@@ -43,8 +43,8 @@ const CreditCardCard = ({ card, privacy, onEdit, onDelete, onMarkClosed, onReope
   const barColor    = utilizationColor(utilizPct);
 
   const showInterest = (card.interestRate ?? 0) > 0 && card.currentBalance > 0;
-  const minPayment   = card.currentBalance * ((card.minPaymentPct ?? 5) / 100);
-  const interestEst  = showInterest ? (card.currentBalance - minPayment) * (card.interestRate! / 12 / 100) : 0;
+  const minPayment   = card.minPayment != null ? Math.min(card.minPayment, card.currentBalance) : undefined;
+  const interestEst  = showInterest && minPayment != null ? Math.max(0, (card.currentBalance - minPayment) * (card.interestRate! / 12 / 100)) : 0;
 
   return (
     <div
@@ -116,7 +116,7 @@ const CreditCardCard = ({ card, privacy, onEdit, onDelete, onMarkClosed, onReope
             }} />
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12, opacity: 0.65, marginBottom: showInterest ? 8 : 0 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12, opacity: 0.65, marginBottom: showInterest && minPayment != null ? 8 : 0 }}>
             <span>Límite: {fmtMoney(card.creditLimit, card.currency, privacy)}</span>
             <span>{Math.round(utilizPct)}% utilizado</span>
             {card.closingDay != null && <span>Cierra día {card.closingDay}</span>}
@@ -125,7 +125,7 @@ const CreditCardCard = ({ card, privacy, onEdit, onDelete, onMarkClosed, onReope
             {card.note && <span>{card.note}</span>}
           </div>
 
-          {showInterest && card.currentBalance > 0 && (
+          {showInterest && minPayment != null && card.currentBalance > 0 && (
             <div style={{
               fontSize: 12, color: '#C13B3B',
               background: 'rgba(193,59,59,0.07)',
@@ -140,9 +140,9 @@ const CreditCardCard = ({ card, privacy, onEdit, onDelete, onMarkClosed, onReope
           {card.status === 'active' && card.currentBalance > 0 && (
             <button
               className="fa-iconbtn fa-iconbtn-ghost"
-              onClick={() => onPayCard(card)}
-              title="Registrar pago"
-              style={{ fontSize: 14 }}
+              onClick={() => !overlimit && onPayCard(card)}
+              title={overlimit ? 'Límite excedido — editá el saldo antes de pagar' : 'Registrar pago'}
+              style={{ fontSize: 14, opacity: overlimit ? 0.35 : 1, cursor: overlimit ? 'not-allowed' : 'pointer' }}
             >💸</button>
           )}
           {card.status === 'active' ? (

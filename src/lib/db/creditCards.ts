@@ -17,7 +17,7 @@ const toCreditCard = (r: CreditCardRow): CreditCard => ({
   interestRate: r.interest_rate ?? undefined,
   closingDay: r.closing_day ?? undefined,
   dueDay: r.due_day ?? undefined,
-  minPaymentPct: r.min_payment_pct ?? undefined,
+  minPayment: r.min_payment_pct ?? undefined,
   note: r.note ?? undefined,
   status: r.status as CreditCard['status'],
   createdAt: r.created_at,
@@ -37,7 +37,7 @@ export const insertCreditCard = async (card: CreditCard, userId: string): Promis
     interest_rate: card.interestRate ?? null,
     closing_day: card.closingDay ?? null,
     due_day: card.dueDay ?? null,
-    min_payment_pct: card.minPaymentPct ?? null,
+    min_payment_pct: card.minPayment ?? null,
     note: card.note ?? null,
     status: card.status,
     created_at: card.createdAt,
@@ -54,7 +54,7 @@ export const updateCreditCard = async (id: string, fields: Partial<Omit<CreditCa
   if (fields.interestRate    !== undefined) row.interest_rate    = fields.interestRate ?? null;
   if (fields.closingDay      !== undefined) row.closing_day      = fields.closingDay ?? null;
   if (fields.dueDay          !== undefined) row.due_day          = fields.dueDay ?? null;
-  if (fields.minPaymentPct   !== undefined) row.min_payment_pct  = fields.minPaymentPct ?? null;
+  if (fields.minPayment   !== undefined) row.min_payment_pct  = fields.minPayment ?? null;
   if (fields.note            !== undefined) row.note             = fields.note ?? null;
   if (fields.status          !== undefined) row.status           = fields.status;
   const { error } = await supabase.from('credit_cards').update(row).eq('id', id);

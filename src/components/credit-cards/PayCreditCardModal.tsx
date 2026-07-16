@@ -61,9 +61,9 @@ export const PayCreditCardModal = ({ card, accounts, privacy, onClose, onSave }:
   const num = parseFloat(amount.replace(',', '.')) || 0;
   const availableLimit = Math.max(0, card.creditLimit - card.currentBalance);
   const showInterest = (card.interestRate ?? 0) > 0 && card.currentBalance > 0;
-  const minPayment = card.currentBalance * ((card.minPaymentPct ?? 5) / 100);
-  const interestIfMin = showInterest
-    ? (card.currentBalance - minPayment) * (card.interestRate! / 12 / 100)
+  const minPayment   = card.minPayment != null ? Math.min(card.minPayment, card.currentBalance) : undefined;
+  const interestIfMin = showInterest && minPayment != null
+    ? Math.max(0, (card.currentBalance - minPayment) * (card.interestRate! / 12 / 100))
     : 0;
 
   return (
@@ -140,7 +140,7 @@ export const PayCreditCardModal = ({ card, accounts, privacy, onClose, onSave }:
             <input className="fa-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
           </label>
 
-          {showInterest && (
+          {showInterest && minPayment != null && (
             <div style={{
               background: 'var(--bg-elev, #fff)',
               border: '2px solid var(--line-soft, #DBCFB4)',
