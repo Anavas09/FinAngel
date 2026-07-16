@@ -106,4 +106,16 @@ export class AppPage {
   async openAddDebt() {
     await this.debtsSection().getByRole('button', { name: '+ Agregar' }).click();
   }
+
+  creditCardsSection(): Locator {
+    return this.page.locator('section.fa-credit-cards');
+  }
+
+  getCreditCards(): Locator {
+    return this.page.locator('.fa-credit-cards .fa-credit-card');
+  }
+
+  async openAddCreditCard() {
+    await this.creditCardsSection().getByRole('button', { name: '+ Agregar' }).click();
+  }
 }

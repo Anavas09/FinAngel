@@ -5,7 +5,7 @@ import type { Transaction } from '../../types';
 interface TransactionRow {
   id: string; user_id: string; account_id: string;
   category_id: string; date: string; amount: number; note: string;
-  recurring: string | null; debt_id: string | null;
+  recurring: string | null; debt_id: string | null; credit_card_id: string | null;
   transfer_group: string | null; created_at: string | null;
 }
 
@@ -14,6 +14,7 @@ const toTransaction = (r: TransactionRow): Transaction => ({
   date: r.date, amount: r.amount, note: r.note,
   ...(r.recurring ? { recurring: r.recurring as Transaction['recurring'] } : {}),
   ...(r.debt_id ? { debtId: r.debt_id } : {}),
+  ...(r.credit_card_id ? { creditCardId: r.credit_card_id } : {}),
   ...(r.transfer_group ? { transferGroup: r.transfer_group } : {}),
   ...(r.created_at ? { createdAt: r.created_at } : {}),
 });
@@ -36,8 +37,9 @@ export const insertTransaction = async (tx: Transaction, userId: string): Promis
     p_amount:      tx.amount,
     p_date:        tx.date,
     p_note:        tx.note,
-    p_recurring:   tx.recurring ?? null,
-    p_debt_id:     tx.debtId ?? null,
+    p_recurring:      tx.recurring ?? null,
+    p_debt_id:        tx.debtId ?? null,
+    p_credit_card_id: tx.creditCardId ?? null,
   });
   if (error) throw error;
 };
@@ -66,6 +68,7 @@ export const updateTransaction = async (tx: Transaction): Promise<void> => {
     account_id: tx.accountId, category_id: tx.categoryId,
     date: tx.date, amount: tx.amount, note: tx.note,
     recurring: tx.recurring ?? null, debt_id: tx.debtId ?? null,
+    credit_card_id: tx.creditCardId ?? null,
   }).eq('id', tx.id);
   if (error) throw error;
 };

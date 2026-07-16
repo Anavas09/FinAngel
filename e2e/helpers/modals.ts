@@ -184,3 +184,57 @@ export async function submitDebtForm(page: Page, isEditing = false) {
   const label = isEditing ? 'Guardar cambios' : 'Agregar deuda';
   await page.locator('.fa-modal').getByRole('button', { name: label }).click();
 }
+
+export interface CreditCardFormOptions {
+  name: string;
+  currency?: 'ARS $' | 'USD US$' | 'USDT';
+  creditLimit: string;
+  currentBalance?: string;
+  closingDay?: string;
+  dueDay?: string;
+  interestRate?: string;
+  minPaymentPct?: string;
+  note?: string;
+}
+
+export async function fillCreditCardForm(page: Page, opts: CreditCardFormOptions) {
+  const modal = page.locator('.fa-modal');
+
+  await modal.getByPlaceholder('Ej: Visa Santander, Mastercard BBVA').fill(opts.name);
+
+  if (opts.currency) {
+    await modal.locator('.fa-kind-chips .fa-chip', { hasText: opts.currency }).click();
+  }
+
+  const amountInputs = modal.locator('.fa-amount-input input');
+  await amountInputs.nth(0).fill(opts.creditLimit);
+
+  if (opts.currentBalance !== undefined) {
+    await amountInputs.nth(1).fill(opts.currentBalance);
+  }
+
+  if (opts.closingDay !== undefined) {
+    await modal.getByPlaceholder('Día de cierre').fill(opts.closingDay);
+  }
+
+  if (opts.dueDay !== undefined) {
+    await modal.getByPlaceholder('Día de vencimiento').fill(opts.dueDay);
+  }
+
+  if (opts.interestRate !== undefined) {
+    await modal.getByPlaceholder('Ej: 120').fill(opts.interestRate);
+  }
+
+  if (opts.minPaymentPct !== undefined) {
+    await modal.getByPlaceholder('5').fill(opts.minPaymentPct);
+  }
+
+  if (opts.note !== undefined) {
+    await modal.getByPlaceholder('Ej: uso solo para supermercado').fill(opts.note);
+  }
+}
+
+export async function submitCreditCardForm(page: Page, isEditing = false) {
+  const label = isEditing ? 'Guardar cambios' : 'Agregar tarjeta';
+  await page.locator('.fa-modal').getByRole('button', { name: label }).click();
+}

@@ -25,6 +25,7 @@ export interface Transaction {
   note: string;
   recurring?: 'monthly' | 'weekly';
   debtId?: string;
+  creditCardId?: string;
   transferGroup?: string;
   createdAt?: string;
 }
@@ -89,3 +90,20 @@ export interface Debt {
 }
 
 export type DebtInput = Omit<Debt, 'id' | 'createdAt'> & { id?: string };
+
+export interface CreditCard {
+  id: string;
+  name: string;
+  creditLimit: number;
+  currentBalance: number;
+  currency: Currency;
+  interestRate?: number;
+  closingDay?: number;
+  dueDay?: number;
+  minPaymentPct?: number;
+  note?: string;
+  status: 'active' | 'closed';
+  createdAt: string;
+}
+
+export type CreditCardInput = Omit<CreditCard, 'id' | 'createdAt'> & { id?: string };

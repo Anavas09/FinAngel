@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import type { DebtInput, TransactionInput } from '../types';
+import type { CreditCardInput, DebtInput, TransactionInput } from '../types';
 
 export interface ModalState {
   addOpen: boolean;
@@ -17,6 +17,10 @@ export interface ModalState {
   setDebtOpen: (v: boolean) => void;
   editingDebt: DebtInput | null;
   setEditingDebt: (d: DebtInput | null) => void;
+  creditCardOpen: boolean;
+  setCreditCardOpen: (v: boolean) => void;
+  editingCard: CreditCardInput | null;
+  setEditingCard: (c: CreditCardInput | null) => void;
   toast: { msg: string; onUndo?: () => void } | null;
   showToast: (msg: string, onUndo?: () => void) => void;
   clearToast: () => void;
@@ -30,6 +34,8 @@ export const useModalState = (): ModalState => {
   const [transferOpen, setTransferOpen]     = useState(false);
   const [debtOpen, setDebtOpen]             = useState(false);
   const [editingDebt, setEditingDebt]       = useState<DebtInput | null>(null);
+  const [creditCardOpen, setCreditCardOpen] = useState(false);
+  const [editingCard, setEditingCard]       = useState<CreditCardInput | null>(null);
   const [toast, setToast]                   = useState<{ msg: string; onUndo?: () => void } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -49,6 +55,8 @@ export const useModalState = (): ModalState => {
     transferOpen, setTransferOpen,
     debtOpen, setDebtOpen,
     editingDebt, setEditingDebt,
+    creditCardOpen, setCreditCardOpen,
+    editingCard, setEditingCard,
     toast, showToast, clearToast,
   };
 };

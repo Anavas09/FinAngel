@@ -8,6 +8,7 @@ import { ChartCard } from './components/charts/ChartCard';
 import { AccountCard } from './components/dashboard/AccountCard';
 import { GreetingCard } from './components/dashboard/GreetingCard';
 import { TotalCard } from './components/dashboard/TotalCard';
+import { CreditCardList } from './components/credit-cards/CreditCardList';
 import { DebtList } from './components/debts/DebtList';
 import { TopBar } from './components/layout/TopBar';
 import { FinAngelMini } from './components/mascot/Mascot';
@@ -15,6 +16,7 @@ import { SettingsPanel } from './components/settings/SettingsPanel';
 import { TransactionList } from './components/transactions/TransactionList';
 import { FaDots } from './components/ui/Dots';
 import { catById, fmtMoney } from './data/utils';
+import { useCreditCardsData } from './hooks/useCreditCardsData';
 import { useDebtsData } from './hooks/useDebtsData';
 import { useFinanceData } from './hooks/useFinanceData';
 import { useLiveFx } from './hooks/useLiveFx';
@@ -26,7 +28,7 @@ import { supabase } from './lib/supabase';
 
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@supabase/supabase-js';
-import type { Debt } from './types';
+import type { CreditCard, Debt } from './types';
 
 const AddTransactionModal = lazy(() => import('./components/transactions/AddTransactionModal').then(m => ({ default: m.AddTransactionModal })));
 const TransferModal        = lazy(() => import('./components/transactions/TransferModal').then(m => ({ default: m.TransferModal })));
@@ -34,6 +36,8 @@ const AddAccountModal      = lazy(() => import('./components/accounts/AddAccount
 const ExportModal          = lazy(() => import('./components/transactions/ExportModal').then(m => ({ default: m.ExportModal })));
 const AddDebtModal         = lazy(() => import('./components/debts/AddDebtModal').then(m => ({ default: m.AddDebtModal })));
 const QuickPayDebtModal    = lazy(() => import('./components/debts/QuickPayDebtModal').then(m => ({ default: m.QuickPayDebtModal })));
+const AddCreditCardModal   = lazy(() => import('./components/credit-cards/AddCreditCardModal').then(m => ({ default: m.AddCreditCardModal })));
+const PayCreditCardModal   = lazy(() => import('./components/credit-cards/PayCreditCardModal').then(m => ({ default: m.PayCreditCardModal })));
 
 const App = () => {
   const { theme, setTheme, selectedTheme, isAutoMode } = useTheme();
@@ -48,9 +52,11 @@ const App = () => {
   const { addOpen, setAddOpen, addAccountOpen, setAddAccountOpen, editingTx, setEditingTx,
           exportOpen, setExportOpen, transferOpen, setTransferOpen,
           debtOpen, setDebtOpen, editingDebt, setEditingDebt,
+          creditCardOpen, setCreditCardOpen, editingCard, setEditingCard,
           toast, showToast, clearToast } = modals;
 
-  const [payingDebt, setPayingDebt]   = useState<Debt | null>(null);
+  const [payingDebt, setPayingDebt]     = useState<Debt | null>(null);
+  const [payingCard, setPayingCard]     = useState<CreditCard | null>(null);
   const [signingOut, setSigningOut]   = useState(false);
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
@@ -77,8 +83,9 @@ const App = () => {
     [tweaks.fxUSD, tweaks.fxUSDT],
   );
 
-  const finance = useFinanceData(session ?? null, showToast, fxRates, txPeriod);
-  const debts   = useDebtsData(session ?? null, showToast, fxRates);
+  const finance      = useFinanceData(session ?? null, showToast, fxRates, txPeriod);
+  const debts        = useDebtsData(session ?? null, showToast, fxRates);
+  const creditCards  = useCreditCardsData(session ?? null, showToast, fxRates);
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -206,6 +213,19 @@ const App = () => {
           onMarkPaid={id => debts.markDebtPaid(id)}
           onPayDebt={d => setPayingDebt(d)}
           onReorder={debts.reorderDebts}
+        />
+
+        <CreditCardList
+          cards={creditCards.cards}
+          totalCardBalanceARS={creditCards.totalCardBalanceARS}
+          privacy={privacy}
+          onAdd={() => { setEditingCard(null); setCreditCardOpen(true); }}
+          onEdit={c => { setEditingCard(c); setCreditCardOpen(true); }}
+          onDelete={id => creditCards.removeCard(id)}
+          onMarkClosed={id => creditCards.markCardClosed(id)}
+          onReopenCard={id => creditCards.reopenCard(id)}
+          onPayCard={c => setPayingCard(c)}
+          onReorder={creditCards.reorderCards}
         />
 
         <section className="fa-section fa-charts">
@@ -338,6 +358,7 @@ const App = () => {
             onClose={() => { setAddOpen(false); setEditingTx(null); }}
             onSave={(tx, debtId) => {
               finance.upsertTx(tx);
+              const creditCardId = tx.creditCardId;
               if (editingTx?.id && debtId) {
                 const oldAbsAmount = Math.abs(editingTx.amount);
                 const newAbsAmount = Math.abs(tx.amount);
@@ -345,20 +366,30 @@ const App = () => {
               } else if (debtId) {
                 debts.partialPayDebt(debtId, Math.abs(tx.amount));
               }
+              if (editingTx?.id && creditCardId) {
+                const oldAbsAmount = Math.abs(editingTx.amount);
+                const newAbsAmount = Math.abs(tx.amount);
+                creditCards.adjustCardPayment(creditCardId, newAbsAmount - oldAbsAmount);
+              } else if (creditCardId) {
+                creditCards.partialPayCard(creditCardId, Math.abs(tx.amount));
+              }
               setAddOpen(false);
               setEditingTx(null);
             }}
             onDelete={editingTx?.id ? () => {
               const tx = editingTx!;
               const debtId = tx.debtId;
+              const creditCardId = tx.creditCardId;
               const absAmt = Math.abs(tx.amount);
               const undo = finance.deleteTx(tx.id!);
               if (debtId) debts.adjustDebtPayment(debtId, -absAmt);
+              if (creditCardId) creditCards.adjustCardPayment(creditCardId, -absAmt);
               setAddOpen(false);
               setEditingTx(null);
               showToast('Movimiento eliminado', () => {
                 undo();
                 if (debtId) debts.adjustDebtPayment(debtId, absAmt);
+                if (creditCardId) creditCards.adjustCardPayment(creditCardId, absAmt);
               });
             } : null}
           />
@@ -406,6 +437,34 @@ const App = () => {
         )}
       </Suspense>
 
+      <Suspense fallback={null}>
+        {creditCardOpen && (
+          <AddCreditCardModal
+            editing={editingCard}
+            onClose={() => { setCreditCardOpen(false); setEditingCard(null); }}
+            onSave={fields => creditCards.addCard(fields)}
+            onUpdate={(id, fields) => creditCards.editCard(id, fields)}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {payingCard && (
+          <PayCreditCardModal
+            card={payingCard}
+            accounts={accounts}
+            privacy={privacy}
+            onClose={() => setPayingCard(null)}
+            onSave={(tx, cardId) => {
+              finance.upsertTx(tx);
+              creditCards.partialPayCard(cardId, Math.abs(tx.amount));
+              setPayingCard(null);
+              showToast('Pago registrado');
+            }}
+          />
+        )}
+      </Suspense>
+
       {toast && (
         <div className="fa-toast">
           <FinAngelMini size={28} mood="happy" />
@@ -425,7 +484,7 @@ const App = () => {
         tweaks={tweaks}
         setTweak={setTweak}
         onLoadSeed={finance.handleLoadSeed}
-        onClearAll={async () => { await finance.handleClearAll(); debts.clearDebts(); }}
+        onClearAll={async () => { await finance.handleClearAll(); debts.clearDebts(); creditCards.clearCards(); }}
         onSignOut={async () => { setSigningOut(true); await supabase.auth.signOut(); }}
         userEmail={session.user.email ?? ''}
         userName={userName}
