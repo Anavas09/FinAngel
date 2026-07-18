@@ -29,7 +29,7 @@ export const autoGenerateRecurring = (txs: Transaction[], now: Date): Transactio
     if (alreadyExists) return;
 
     generated.push({
-      id: `t_rec_${Date.now()}_${i}`,
+      id: crypto.randomUUID(),
       date: today,
       accountId: t.accountId,
       categoryId: t.categoryId,

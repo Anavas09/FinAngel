@@ -162,7 +162,7 @@ React Native + Expo app with shared business logic. Repo: `C:\Users\angel\OneDri
 
 Plan completo en `ledger-upgrade-plan.md`.
 
-- **Fase 1 — Supabase SQL** ✅: columnas `transfer_group`/`reverses_tx_id`/`created_at` en `transactions`; vista `account_balances`; tabla `audit_log` + trigger; RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente).
+- **Fase 1 — Supabase SQL** ✅: columnas `transfer_group`/`reverses_tx_id`/`created_at` en `transactions`; vista `account_balances`; tabla `audit_log` + trigger; RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente). Tipos del RPC `register_transaction`: `p_id uuid`, `p_user_id uuid`; `p_account_id text`, `p_debt_id text`, `p_credit_card_id text` (los IDs de cuentas/deudas/tarjetas son texto con prefijos como `'ars'`, `'acc_123'`, `'debt-123'`, `'cc-...'`).
 - **Fase 2 — TypeScript** ✅: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
 - **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date tiene demasiada fricción para app personal.
 - **Fase 4 (futuro)**: migrar `amount FLOAT → BIGINT` (centavos × 100). Scope grande — encarar en rama separada cuando Fases 1+2 lleven tiempo en producción.
