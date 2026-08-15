@@ -167,6 +167,10 @@ Plan completo en `ledger-upgrade-plan.md`.
 - **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date tiene demasiada fricción para app personal.
 - **Fase 4 (futuro)**: migrar `amount FLOAT → BIGINT` (centavos × 100). Scope grande — encarar en rama separada cuando Fases 1+2 lleven tiempo en producción.
 
+## Planned features (con plan escrito, no implementado)
+
+- **Módulo de subida de resumen de tarjeta (PDF → regex → preview editable → bulk insert)** — plan completo en `credit-card-summary-upload-plan.md`. Decisiones tomadas: **regex por banco** (descartada Claude API porque el preview editable compensa errores de parseo); `pdfjs-dist` como extractor (única alternativa 100% browser + gratis + sin backend); modal full-screen con wizard de 3 pasos (no router — FinAngel es SPA); MVP arranca por **Galicia** (banco principal), Naranja X y MP en fase 2 replicando el patrón; **requiere correr SQL de setup en Supabase** (tabla `merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar. Aprendizaje incremental de categorías por comercio persistido en `merchant_mappings`.
+
 ## Pending work (security hardening)
 
 Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component.
