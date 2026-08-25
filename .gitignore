@@ -23,6 +23,7 @@ e2e/.auth/
 .env.test
 playwright-report/
 test-results/
+.playwright-mcp/
 
 # Editor directories and files
 .vscode/*
