@@ -126,7 +126,7 @@ e2e/
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
     03-transactions.spec.ts     — 13 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, recurrente, balance
     04-transfers.spec.ts        — 7 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default
-    05-export.spec.ts           — 8 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF
+    05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
     06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
     07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
     08-search-filter.spec.ts    — 7 tests: buscar texto/vacío/limpiar, filtro período, "Todos", combinado, buscar por cuenta
@@ -135,11 +135,11 @@ e2e/
     11-render-stability.spec.ts — 8 tests: diagnóstico de parpadeos al cambiar de pestaña (baseline requests, spinner re-aparece, re-fetch post-carga, FX mount-only, total estable, MutationObserver, timing)
     12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
     13-quickpay-categories.spec.ts — 14 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno con cuota mensual, pre-relleno con saldo pendiente, saldo insuficiente en input de monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda
-    14-ux-dots-fab.spec.ts         — tests de FaDots spinner y comportamiento del FAB
-    15-credit-cards.spec.ts        — 19 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, calculadora de intereses en modal, total ARS, abrir desde estado vacío
+    14-ux-dots-fab.spec.ts         — 3 tests: FAB con SVG (no texto "+"), botón login muestra puntitos + "Entrando…" durante la carga, overlay de cierre de sesión con puntitos
+    15-credit-cards.spec.ts        — 20 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, calculadora de intereses en modal, total ARS, abrir desde estado vacío
 ```
 
-**140 tests en total — ~134 pasan**. Fallos conocidos: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests; `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase. Tests de `09-charts` y el test de presupuesto en `06-settings` fallan cuando el seed data es de un mes anterior al actual (el filtro `periodTxs` con el período por defecto no encuentra transacciones). Todos pasan en aislamiento o con seed data del mes corriente.
+**141 tests en total — ~135 pasan**. Fallos conocidos: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests; `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase. Tests de `09-charts` y el test de presupuesto en `06-settings` fallan cuando el seed data es de un mes anterior al actual (el filtro `periodTxs` con el período por defecto no encuentra transacciones). Todos pasan en aislamiento o con seed data del mes corriente.
 
 ### Notas de arquitectura de búsqueda/filtros
 
@@ -158,21 +158,80 @@ El estado `txSearch`, `txPeriod`, `txKind` y `visibleTxCount` vive en `App.tsx` 
 
 React Native + Expo app with shared business logic. Repo: `C:\Users\angel\OneDrive\Documentos\React Native\FinAngel-Mobile` (has its own CLAUDE.md).
 
-## Ledger upgrade ✅ (en main desde 2026-07-01)
+## Ledger upgrade ✅ (en main desde 2026-07-01, cleanup 2026-08-25)
 
-Plan completo en `ledger-upgrade-plan.md`.
+Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-plan.md`.
 
-- **Fase 1 — Supabase SQL** ✅: columnas `transfer_group`/`reverses_tx_id`/`created_at` en `transactions`; vista `account_balances`; tabla `audit_log` + trigger; RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente). Tipos del RPC `register_transaction`: `p_id uuid`, `p_user_id uuid`; `p_account_id text`, `p_debt_id text`, `p_credit_card_id text` (los IDs de cuentas/deudas/tarjetas son texto con prefijos como `'ars'`, `'acc_123'`, `'debt-123'`, `'cc-...'`).
+- **Fase 1 — Supabase SQL** ✅: RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente). Tipos del RPC `register_transaction`: `p_id uuid`, `p_user_id uuid`; `p_account_id text`, `p_debt_id text`, `p_credit_card_id text` (los IDs de cuentas/deudas/tarjetas son texto con prefijos como `'ars'`, `'acc_123'`, `'debt-123'`, `'cc-...'`). Columnas `transfer_group` y `created_at` en `transactions`.
 - **Fase 2 — TypeScript** ✅: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
 - **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date tiene demasiada fricción para app personal.
-- **Fase 4 (futuro)**: migrar `amount FLOAT → BIGINT` (centavos × 100). Scope grande — encarar en rama separada cuando Fases 1+2 lleven tiempo en producción.
+- **Cleanup 2026-08-25** ✅: eliminado del schema el trigger `enforce_tx_immutability` + función `prevent_tx_mutation` (residuo de Fase 3 que hacía fallar `updateTransaction` con "tx_immutable: amount and date cannot be changed"). También removidos por dead weight (nadie los consultaba desde el código): tabla `audit_log` + trigger `audit_transactions` + función `log_transaction_change`, vista `account_balances`, columna `reverses_tx_id` en `transactions`. Se mantienen los RPCs, `transfer_group` y `created_at`.
+- **Fase 4** ❌ descartada: `amount FLOAT → BIGINT` (centavos × 100) es scope grande y para app personal no aporta valor real. Los FLOAT alcanzan.
 
 ## Planned features (con plan escrito, no implementado)
 
 - **Módulo de subida de resumen de tarjeta (PDF → regex → preview editable → bulk insert)** — plan completo en `credit-card-summary-upload-plan.md`. Decisiones tomadas: **regex por banco** (descartada Claude API porque el preview editable compensa errores de parseo); `pdfjs-dist` como extractor (única alternativa 100% browser + gratis + sin backend); modal full-screen con wizard de 3 pasos (no router — FinAngel es SPA); MVP arranca por **Galicia** (banco principal), Naranja X y MP en fase 2 replicando el patrón; **requiere correr SQL de setup en Supabase** (tabla `merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar. Aprendizaje incremental de categorías por comercio persistido en `merchant_mappings`.
 
-## Pending work (security hardening)
+## Pending work
 
-Outstanding items: PIN + AES-256-GCM encryption for localStorage, LockScreen component.
+- **SEC-1** — cifrado AES-256-GCM para localStorage (`src/data/crypto.ts` + adaptar `loadState`/`saveState` en `src/data/utils.ts`).
+- **SEC-2** — LockScreen + PIN (`src/hooks/useLock.ts`, `src/components/LockScreen.tsx`, sección Seguridad en `SettingsPanel`). SEC-1 y SEC-2 son interdependientes — implementar juntos.
+- **Módulo subida resumen tarjeta** — plan en `credit-card-summary-upload-plan.md`; requiere correr SQL de setup (`merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar.
+- **Migrations Supabase versionadas** — mover schema a `supabase/migrations/*.sql` con Supabase CLI (README lo lista como TODO).
 
-Already done: módulo de tarjetas de crédito (`credit-cards/`): `CreditCardList`, `AddCreditCardModal`, `PayCreditCardModal`; hook `useCreditCardsData`; DB layer `src/lib/db/creditCards.ts`; tipo `CreditCard`/`CreditCardInput` en `types.ts`; `creditCardId?` en `Transaction`; RPC `register_transaction` actualizado con `p_credit_card_id default null`; tabla Supabase `credit_cards` con RLS; columna `credit_card_id` en `transactions`; calculadora de intereses en `PayCreditCardModal`; barra de utilización verde/amarillo/rojo; 19 tests E2E en `15-credit-cards.spec.ts`. centrado de emojis en `AddAccountModal` picker (display:flex + alignItems + justifyContent + lineHeight:1 en cada botón), `.fa-kind-chips { gap: 8px }` añadido a `night.css` y `sticker.css` (solo existía en `warm.css`), `.fa-form .fa-chip` override con `padding: 9px 16px; font-size: 13px` añadido a `night.css` y `sticker.css` para igualar espaciado con `warm`/`pastel`, estado activo de chips en `sticker.css` usa estilo invertido (`background: var(--ink); color: white; box-shadow: none; transform: translate(2px,2px)`) para diferenciar visualmente el chip seleccionado, neutralización de `background: var(--lavender)` en `.fa-form .fa-chip:nth-child(2)` en `sticker.css` (evitaba que Billetera/USD parecieran preseleccionados), `GreetingCard` reemplaza fecha hardcodeada "Mayo 2026" por `currentMonthYear()` dinámico con locale `es-AR`, CSV injection fix in `ExportModal` (`sanitizeCell`), privacy masking in `fmtMoney`, Supabase RLS for data isolation, Content Security Policy headers in `index.html` (including `https://dolarapi.com` in `connect-src`), comprehensive input validation (monto ≤ 12 dígitos, nota ≤ 200 chars), re-fetch on tab-switch fix (`[session?.user.id]` in `useFinanceData`/`useDebtsData`), FX inputs sync fix (`useEffect` in `SettingsPanel`), budget progress bars inline in `SettingsPanel` (mini 4px bar + `$spent/$budget`, color-coded green/yellow/red, `categoryData` prop from `App.tsx`), expense/egreso colors shifted to red (`--coral`/`--rose` en los 4 temas), Gasto/Ingreso tabs diferenciados por `data-kind` attribute + CSS (rojo/verde) en `AddTransactionModal`, colores hardcoded en `ExportModal` y `SettingsPanel` actualizados a `#C13B3B`, `pastel` theme reemplazado por opción `auto` en `ThemeKey`, categoría `servicios` reemplazada por `luz_gas` (Luz / Gas 💡), `internet` (Internet / Tel. 🌐) y `suscripciones` (Suscripciones 📱) en `constants.ts`, `flowData` y `categoryData` excluyen `categoryId === 'transfer'` (transferencias entre cuentas propias no inflan Ingresos/Egresos del gráfico), nueva categoría `envio_pago` (Envío / Pago 💸, color `#C13B3B`) para pagos a terceros, pago parcial de deudas: `partialPayDebt` en `useDebtsData` (descuenta `remainingAmount`, marca como pagada si llega a 0), botón 💸 en `DebtCard` abre `QuickPayDebtModal` (cuenta+monto+fecha; descuenta balance de cuenta y `remainingAmount` de la deuda en un paso; si no hay cuentas en la moneda de la deuda muestra mensaje de fallback), selector "Aplicar a deuda" en `AddTransactionModal` (visible en gastos nuevos, filtra por moneda de la cuenta seleccionada, auto-rellena categoría `envio_pago` y nota `Pago de {nombre}`, pre-rellena monto con cuota mensual si existe), `luz_gas` renombrado a "Luz / Agua / Gas" (id sin cambios), nueva categoría `monotributo` (Monotributo 🧾, `#E8A838`), nueva categoría `impuestos` (Impuestos 🏛️, `#8B7355`), prop `privacy` añadida a `AddTransactionModal`/`TransferModal`/`QuickPayDebtModal` (muestra saldo en account chips cuando privacidad desactivada), validación de saldo insuficiente en gastos (`AddTransactionModal`) y transferencias (`TransferModal`): error se mueve al input de monto con focus automático y mensaje contextual, `QuickPayDebtModal` valida también saldo disponible de cuenta (no solo `remainingAmount`), `SettingsPanel` botones/selects usan `var(--bg-soft, white)` en lugar de `white` hardcodeado (fix para tema night), transferencias cross-currency: `insertTransfer` convierte el monto destino usando `fxRates` (USD→ARS multiplica, ARS→USD divide, USD↔USDT vía ARS como pivote); `TransferModal` muestra hint "≈ X ARS en destino" al tipear cuando las monedas difieren, `BudgetAlert` component reutilizable con prop opcional `amountLabel` (default `"Presupuestado"`): `TotalCard` muestra alerta comparando presupuesto **restante** (límite − gastado por categoría) vs patrimonio/ingresos — desaparece cuando todo el presupuesto del mes ya fue gastado; `SettingsPanel` aplica el mismo cálculo de presupuesto restante; `TotalCard` usa `amountLabel="Por gastar"`, `FaDots` spinner de puntitos animados usado en el overlay de cierre de sesión, nueva categoría `transporte` (Transporte 🚌, `#60A5FA`) para Cabify/DiDi/SUBE, `TransactionCard` extraído como componente co-located en `TransactionList.tsx`, `BudgetChips` movido de `TotalCard` a `GreetingCard`: chips visuales (verde ✓ / rojo ⚠ si >10% excedido) bajo título "PRESUPUESTO PAGADO", separados de los chips de fecha/layout; aparecen solo cuando el gasto del mes alcanza el presupuesto de la categoría; `upsertTx` en `useFinanceData` muestra toast "✓ Presupuesto de [Categoría] completado" al cruzar el umbral en lugar del toast genérico, búsqueda de transacciones extendida a categoría (label): `catById(t.categoryId).label` incluido en el filtro `filteredTx` de `App.tsx`; nuevo filtro `txKind` (`'' | 'income' | 'expense'`) con `<select>` Todos/Ingresos/Gastos junto a los filtros de texto y período; `ExportModal` recibe prop `kind` y filtra `effectiveTxs` internamente — CSV lleva sufijo `-ingresos`/`-egresos` en el nombre de archivo, PDF lleva el label delante de la fecha en `document.title` (`FinAngel — Resumen Ingresos/Egresos YYYY-MM-DD`).
+## Already done
+
+### Módulos grandes
+- **Tarjetas de crédito** (`credit-cards/`): `CreditCardList`, `AddCreditCardModal`, `PayCreditCardModal`; hook `useCreditCardsData`; DB layer `src/lib/db/creditCards.ts`; tipos `CreditCard`/`CreditCardInput`; `creditCardId?` en `Transaction`; RPC `register_transaction` extendido con `p_credit_card_id default null`; tabla Supabase `credit_cards` con RLS + columna `credit_card_id` en `transactions`; calculadora de intereses en `PayCreditCardModal`; barra de utilización verde/amarillo/rojo; 20 tests E2E en `15-credit-cards.spec.ts`.
+- **Pago parcial de deudas**: `partialPayDebt` en `useDebtsData` (descuenta `remainingAmount`, marca pagada si llega a 0); botón 💸 en `DebtCard` abre `QuickPayDebtModal` (cuenta+monto+fecha; descuenta balance y `remainingAmount` en un paso; fallback si no hay cuentas en la moneda de la deuda); selector "Aplicar a deuda" en `AddTransactionModal` (visible en gastos nuevos, filtra por moneda de la cuenta, auto-rellena categoría `envio_pago` y nota `Pago de {nombre}`, pre-rellena monto con cuota mensual).
+- **Transferencias cross-currency**: `insertTransfer` convierte el monto destino con `fxRates` (USD↔ARS multiplica/divide, USD↔USDT vía ARS como pivote); `TransferModal` muestra hint "≈ X ARS en destino" cuando las monedas difieren.
+
+### Seguridad (baseline)
+- CSV injection fix en `ExportModal` (`sanitizeCell`).
+- Privacy masking en `fmtMoney`.
+- Supabase RLS por usuario.
+- CSP headers en `index.html` (incluye `https://dolarapi.com` en `connect-src`).
+- Input validation (monto ≤ 12 dígitos, nota ≤ 200 chars).
+
+### UX presupuestos y alertas
+- **Budget progress bars** inline en `SettingsPanel` (mini 4px bar + `$spent/$budget`, color-coded verde/amarillo/rojo; `categoryData` desde `App.tsx`).
+- **`BudgetAlert` reutilizable** con prop opcional `amountLabel` (default `"Presupuestado"`): `TotalCard` compara presupuesto **restante** (límite − gastado por categoría) vs patrimonio/ingresos — desaparece cuando todo el presupuesto del mes ya fue gastado; mismo cálculo en `SettingsPanel`; `TotalCard` usa `amountLabel="Por gastar"`.
+- **`BudgetChips`** movido de `TotalCard` a `GreetingCard`: chips (verde ✓ / rojo ⚠ si >10% excedido) bajo título "PRESUPUESTO PAGADO", separados de fecha/layout; solo aparecen cuando el gasto del mes alcanza el presupuesto de la categoría.
+- `upsertTx` en `useFinanceData` muestra toast `"✓ Presupuesto de [Categoría] completado"` al cruzar el umbral (en vez del toast genérico).
+
+### Filtros y búsqueda
+- Búsqueda de transacciones extendida a categoría (label): `catById(t.categoryId).label` incluido en `filteredTx` de `App.tsx`.
+- Filtro `txKind` (`'' | 'income' | 'expense'`) con `<select>` Todos/Ingresos/Gastos junto a texto y período.
+- `ExportModal` recibe prop `kind` y filtra `effectiveTxs` internamente — CSV con sufijo `-ingresos`/`-egresos` y PDF con label en `document.title` (`FinAngel — Resumen Ingresos/Egresos YYYY-MM-DD`).
+- `flowData` y `categoryData` excluyen `categoryId === 'transfer'` (transferencias entre cuentas propias no inflan Ingresos/Egresos).
+
+### Validaciones y privacidad en modales
+- Saldo insuficiente en gastos (`AddTransactionModal`) y transferencias (`TransferModal`): error en el input de monto con focus automático y mensaje contextual.
+- `QuickPayDebtModal` valida saldo disponible de cuenta además de `remainingAmount`.
+- Prop `privacy` añadida a `AddTransactionModal`/`TransferModal`/`QuickPayDebtModal` (muestra saldo en account chips cuando privacidad desactivada).
+
+### Categorías
+- `servicios` reemplazada por `luz_gas` (💡), `internet` (🌐) y `suscripciones` (📱).
+- `luz_gas` renombrado a "Luz / Agua / Gas" (id sin cambios).
+- Nuevas: `envio_pago` (💸 `#C13B3B`), `monotributo` (🧾 `#E8A838`), `impuestos` (🏛️ `#8B7355`), `transporte` (🚌 `#60A5FA`, Cabify/DiDi/SUBE).
+
+### Colores y temas
+- Expense/egreso → rojo (`--coral`/`--rose` en los 4 temas).
+- Gasto/Ingreso tabs diferenciados por `data-kind` + CSS (rojo/verde) en `AddTransactionModal`.
+- Colores hardcoded en `ExportModal` y `SettingsPanel` → `#C13B3B`.
+- Tema `pastel` reemplazado por opción `auto` en `ThemeKey`.
+- Night theme: `SettingsPanel` botones/selects usan `var(--bg-soft, white)` en lugar de `white` hardcodeado.
+
+### Fixes de CSS (chips y pickers)
+- Centrado de emojis en el picker de `AddAccountModal` (display:flex + alignItems + justifyContent + lineHeight:1 por botón).
+- `.fa-kind-chips { gap: 8px }` añadido a `night.css` y `sticker.css` (ya existía en `warm.css`).
+- `.fa-form .fa-chip` override con `padding: 9px 16px; font-size: 13px` en `night.css`/`sticker.css` para igualar `warm`/`pastel`.
+- Estado activo de chips en `sticker.css` usa estilo invertido (`background: var(--ink); color: white; box-shadow: none; transform: translate(2px,2px)`).
+- Neutralización de `background: var(--lavender)` en `.fa-form .fa-chip:nth-child(2)` en `sticker.css` (evitaba que Billetera/USD parecieran preseleccionados).
+
+### Otros fixes de UI y refactors
+- `GreetingCard` reemplaza fecha hardcodeada "Mayo 2026" por `currentMonthYear()` dinámico con locale `es-AR`.
+- Re-fetch on tab-switch fix (`[session?.user.id]` en `useFinanceData`/`useDebtsData`).
+- FX inputs sync fix (`useEffect` en `SettingsPanel`).
+- `FaDots` spinner en el overlay de cierre de sesión.
+- `TransactionCard` extraído como componente co-located en `TransactionList.tsx`.
