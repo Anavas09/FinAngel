@@ -138,7 +138,6 @@ App **React Native + Expo** en desarrollo activo, comparte ~70% de la lógica de
 ## Roadmap corto
 
 - **Módulo de subida de resumen de tarjeta** (PDF → regex → preview → bulk insert). Plan en `credit-card-summary-upload-plan.md`.
-- **Security hardening** — PIN + AES-256-GCM para localStorage, LockScreen.
 - **Migrations versionadas** — mover el schema SQL a `supabase/migrations/*.sql` con Supabase CLI.
 
 ## Licencia

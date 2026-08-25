@@ -174,10 +174,14 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 
 ## Pending work
 
-- **SEC-1** — cifrado AES-256-GCM para localStorage (`src/data/crypto.ts` + adaptar `loadState`/`saveState` en `src/data/utils.ts`).
-- **SEC-2** — LockScreen + PIN (`src/hooks/useLock.ts`, `src/components/LockScreen.tsx`, sección Seguridad en `SettingsPanel`). SEC-1 y SEC-2 son interdependientes — implementar juntos.
 - **Módulo subida resumen tarjeta** — plan en `credit-card-summary-upload-plan.md`; requiere correr SQL de setup (`merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar.
 - **Migrations Supabase versionadas** — mover schema a `supabase/migrations/*.sql` con Supabase CLI (README lo lista como TODO).
+
+## Descartado (con razón documentada)
+
+- **SEC-1 (cifrado AES-256-GCM para localStorage) + SEC-2 (LockScreen + PIN)** ❌ descartados 2026-08-25. La premisa original del plan asumía que localStorage guardaba datos financieros sensibles; en realidad todos los saldos, transacciones, cuentas, deudas y tarjetas viven en Supabase con RLS por usuario. En localStorage solo persisten `finangel:tweaks` (preferencias UI) y `finangel:theme` — sin valor sensible. El único escenario que SEC-1+SEC-2 protegían era "alguien mira los saldos por encima del hombro con la sesión abierta", y eso ya está cubierto por el toggle de privacidad (`privacy` en `Tweaks`, aplicado en `fmtMoney`). No hay credenciales bancarias ni ejecución de transferencias — la app es visual.
+- **Ledger Fase 3 (inmutabilidad estricta de amount/date)** ❌ descartada al escribir el plan: corregir un monto mal ingresado es un caso común y válido para app personal. Residuo del intento inicial (trigger `enforce_tx_immutability`) eliminado en el cleanup 2026-08-25.
+- **Ledger Fase 4 (`amount FLOAT → BIGINT` centavos × 100)** ❌ descartada 2026-08-25: scope grande sin valor real para app personal. Los FLOAT alcanzan.
 
 ## Already done
 
