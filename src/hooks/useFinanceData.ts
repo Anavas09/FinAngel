@@ -129,15 +129,20 @@ export const useFinanceData = (
     const existing = tx.id ? transactions.find(t => t.id === tx.id) : undefined;
     if (existing) {
       const updated    = tx as Transaction;
-      const delta      = updated.amount - existing.amount;
-      const newAccounts = accounts.map(a =>
-        a.id === updated.accountId ? { ...a, balance: a.balance + delta } : a
-      );
+      // Revierte el monto viejo en su cuenta y aplica el nuevo: si cambió la cuenta, se ajustan las dos
+      const touched    = (id: string) => id === existing.accountId || id === updated.accountId;
+      const newAccounts = accounts.map(a => {
+        if (!touched(a.id)) return a;
+        let balance = a.balance;
+        if (a.id === existing.accountId) balance -= existing.amount;
+        if (a.id === updated.accountId)  balance += updated.amount;
+        return { ...a, balance };
+      });
       setTransactions(prev => prev.map(t => t.id === tx.id ? updated : t));
       setAccounts(newAccounts);
       Promise.all([
         updateTransaction(updated),
-        updateAccountBalance(updated.accountId, newAccounts.find(a => a.id === updated.accountId)!.balance),
+        ...newAccounts.filter(a => touched(a.id)).map(a => updateAccountBalance(a.id, a.balance)),
       ]).catch(() => {
         setTransactions(transactions);
         setAccounts(accounts);

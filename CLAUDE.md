@@ -121,7 +121,7 @@ e2e/
   tests/
     01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
-    03-transactions.spec.ts     — 12 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance
+    03-transactions.spec.ts     — 13 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar)
     04-transfers.spec.ts        — 7 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default
     05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
     06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
@@ -136,7 +136,7 @@ e2e/
     15-credit-cards.spec.ts        — 21 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
 ```
 
-**141 tests en total.** Fallos conocidos:
+**142 tests en total.** Fallos conocidos:
 - `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests.
 - `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase.
 - `15-credit-cards` "alerta de interés visible en la tarjeta cuando TNA está seteada" y "calculadora de intereses visible en modal de pago con TNA" fallan siempre desde `caef132`: la alerta y la calculadora requieren `minPayment` y esos tests solo cargan la TNA (verificado 2026-10-21).
@@ -177,7 +177,8 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 
 - **Módulo subida resumen tarjeta** — plan en `credit-card-summary-upload-plan.md`; requiere correr SQL de setup (`merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar.
 - **Migrations Supabase versionadas** — mover schema a `supabase/migrations/*.sql` con Supabase CLI (README lo lista como TODO).
-- **Bugs de datos** — plan en `data-bugs-plan.md`: editar un movimiento cambiándole la cuenta no revierte la cuenta original (bug 2). Más dos hallazgos menores (fecha "de hoy" en UTC; editar un pago de tarjeta pierde `credit_card_id`).
+- **Hallazgos menores de datos** — en `data-bugs-plan.md` (los 3 bugs principales ya están resueltos): fecha "de hoy" en UTC; editar un pago de tarjeta pierde `credit_card_id`.
+- **Tests E2E desactualizados** — 2 de `15-credit-cards` (hay que cargar `minPayment`) y los que dependen del seed con fechas fijas de mayo 2026 (generar el seed con fechas del mes actual). Detalle en la sección Testing.
 
 ## Descartado (con razón documentada)
 
@@ -244,3 +245,4 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 - `FaDots` spinner en el overlay de cierre de sesión.
 - `TransactionCard` extraído como componente co-located en `TransactionList.tsx`.
 - "Borrar todos los datos" (solo dev) borra también las tarjetas en Supabase (`clearUserData`); antes solo se vaciaban en pantalla y volvían al recargar. Los presupuestos se conservan a propósito. Test E2E con recarga en `15-credit-cards.spec.ts` (2026-10-21).
+- Editar un movimiento cambiándole la cuenta: `upsertTx` revierte el monto en la cuenta original y lo aplica en la nueva, y persiste las dos (antes solo aplicaba el delta a la nueva y la original quedaba descontada). Test E2E con recarga en `03-transactions.spec.ts` (2026-10-21).
