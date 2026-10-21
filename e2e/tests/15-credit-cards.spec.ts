@@ -284,3 +284,36 @@ test('abrir modal desde botón del estado vacío', async ({ withClear: app }) =>
   await expect(modal).toBeVisible();
   await expect(modal.getByRole('heading', { name: 'Nueva tarjeta de crédito' })).toBeVisible();
 });
+
+// ─── Borrar todos los datos ───────────────────────────────────────────────────
+
+test('borrar todos los datos elimina las tarjetas en la base y no vuelven al recargar', async ({ withSeed: app }) => {
+  // Tarjeta con un pago registrado: el pago es una transacción vinculada a la tarjeta (credit_card_id)
+  await app.openAddCreditCard();
+  await fillCreditCardForm(app.page, {
+    name: 'Visa borrar todo',
+    creditLimit: '100000',
+    currentBalance: '20000',
+  });
+  await submitCreditCardForm(app.page);
+
+  await app.getCreditCards().filter({ hasText: 'Visa borrar todo' }).getByTitle('Registrar pago').click();
+  const modal = app.page.locator('.fa-modal');
+  const amountInput = modal.locator('.fa-amount-input input');
+  await amountInput.clear();
+  await amountInput.fill('5000');
+  await modal.getByRole('button', { name: 'Registrar pago' }).click();
+  await expect(app.getToast()).toContainText('Pago registrado', { timeout: 5_000 });
+
+  await app.clearAllData();
+  // clearAllData espera cualquier toast; este confirma que clearUserData terminó sin error
+  await expect(app.getToast()).toContainText('Todos los datos fueron borrados', { timeout: 10_000 });
+
+  // El hook de tarjetas arranca vacío mientras carga: hay que esperar la respuesta real de la base
+  const cardsResponse = app.page.waitForResponse(
+    r => r.url().includes('/rest/v1/credit_cards') && r.request().method() === 'GET',
+  );
+  await app.page.reload();
+  expect(await (await cardsResponse).json()).toHaveLength(0);
+  await expect(app.creditCardsSection().locator('.fa-empty')).toBeVisible({ timeout: 10_000 });
+});

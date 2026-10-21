@@ -131,19 +131,6 @@ test('deshacer eliminación restaura la transacción', async ({ withSeed: app })
   await expect(app.getTransactionItems()).toHaveCount(initialCount, { timeout: 8_000 });
 });
 
-test('transacción recurrente mensual se guarda', async ({ withSeed: app }) => {
-  await app.openAddTransaction();
-  await fillTransactionForm(app.page, {
-    amount: '2000',
-    note: 'Alquiler recurrente',
-    recurring: 'monthly',
-  });
-  await submitTransactionForm(app.page);
-
-  // Aparece en lista
-  await expect(app.page.locator('.fa-tx-note', { hasText: 'Alquiler recurrente' })).toBeVisible();
-});
-
 test('saldo insuficiente en gasto muestra error en el input de monto', async ({ withSeed: app }) => {
   // Mercado Pago tiene saldo 86450 ARS en seed
   await app.openAddTransaction();

@@ -7,7 +7,6 @@ export interface TransactionFormOptions {
   categoryLabel?: string;
   note?: string;
   date?: string;
-  recurring?: '' | 'monthly' | 'weekly';
 }
 
 export interface TransferFormOptions {
@@ -56,12 +55,6 @@ export async function fillTransactionForm(page: Page, opts: TransactionFormOptio
   // Note
   if (opts.note !== undefined) {
     await modal.getByPlaceholder('ej. Café con Lu').fill(opts.note);
-  }
-
-  // Recurring
-  if (opts.recurring !== undefined) {
-    const selectValue = opts.recurring === 'monthly' ? 'monthly' : opts.recurring === 'weekly' ? 'weekly' : '';
-    await modal.locator('select').selectOption(selectValue);
   }
 }
 

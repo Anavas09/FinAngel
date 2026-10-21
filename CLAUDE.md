@@ -44,15 +44,13 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 
 **Database layer** — `src/lib/db/` exports CRUD functions grouped by domain: `accounts.ts`, `transactions.ts`, `budgets.ts`, `seed.ts`. All calls use the Supabase client from `src/lib/supabase.ts` (env vars `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY`).
 
-**Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount, auto-generates recurring transactions, and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`. Accepts a `period: string` (`YYYY-MM`) parameter — `categoryData` and `flowData` are filtered by that period (empty string = all). `txPeriod` in `App.tsx` defaults to the current month and is shared between the transaction list and both chart cards.
+**Finance hook** — `useFinanceData` (`src/hooks/useFinanceData.ts`) fetches all data on mount and exposes derived values (`totalsByCcy`, `totalInARS`, `monthNet`, `categoryData[]`, `flowData[]`) plus CRUD handlers passed down from `App.tsx`. Accepts a `period: string` (`YYYY-MM`) parameter — `categoryData` and `flowData` are filtered by that period (empty string = all). `txPeriod` in `App.tsx` defaults to the current month and is shared between the transaction list and both chart cards.
 
 **Theme system** — three CSS themes + an `auto` mode: `public/themes/{sticker,warm,night}.css` (plus `pastel.css` kept but not selectable). `useTheme` (`src/hooks/useTheme.ts`) swaps them at runtime by injecting/removing a `<link data-fa-theme>` element. Active theme persisted in localStorage. `ThemeKey = 'sticker' | 'warm' | 'night' | 'auto'`. Auto mode switches between `night` (18h–6h) and `warm` (6h–18h); stored as `'auto'` in localStorage. TopBar shows current effective theme label in auto mode.
 
 **Tweaks** — `useTweaks` (`src/hooks/useTweaks.ts`) manages the `Tweaks` object. `layout` is applied as `fa-layout-{layout}` on the root div. `fxUSD`/`fxUSDT` override the hardcoded rates in `FX_TO_ARS` at runtime.
 
 **Currency** — accounts hold balances in their native currency (ARS / USD / USDT). All totals and charts convert to ARS using rates from `FX_TO_ARS` (`src/data/constants.ts`), overridable via Tweaks. No live FX feed.
-
-**Recurring transactions** — `src/lib/finance/recurring.ts` auto-generates monthly/weekly transactions on load, guarded by duplicate checks.
 
 **Mascot** — `useMascot` (`src/hooks/useMascot.ts`) derives mood from `monthNet` vs income and returns a `MascotState` + random copy line from `MASCOT_COPY` (keyed by `MascotPersonality × MascotMood`).
 
@@ -70,7 +68,6 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 | `src/lib/db/transactions.ts` | Transaction CRUD (fetch, insert, update, delete) |
 | `src/lib/db/budgets.ts` | Budget CRUD (fetch, upsert, delete) |
 | `src/lib/db/seed.ts` | `seedUserData` / `clearUserData` helpers |
-| `src/lib/finance/recurring.ts` | Auto-generate recurring transactions on load |
 | `src/hooks/useFinanceData.ts` | Core data hook: fetches + derived values + CRUD handlers |
 | `src/hooks/useModalState.ts` | Modal open/close flags + toast with undo |
 | `src/hooks/useMascot.ts` | Mascot mood + copy line derivation |
@@ -87,7 +84,7 @@ src/components/
   charts/       ChartCard           — donut chart wrapper (categories or flow)
                 Donut               — SVG donut renderer
   transactions/ TransactionList     — paginated list with search (nota/cuenta/categoría), period filter, kind filter (Todos/Ingresos/Gastos), edit/delete; co-located TransactionCard
-                AddTransactionModal — add/edit form with recurring field
+                AddTransactionModal — add/edit form (gasto/ingreso, categoría, selector "Aplicar a deuda")
                 TransferModal       — inter-account transfer (creates two linked txs)
                 ExportModal         — CSV export with sanitization
   debts/        DebtList            — debt cards with quick-pay, edit, mark-paid, delete
@@ -124,7 +121,7 @@ e2e/
   tests/
     01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
-    03-transactions.spec.ts     — 13 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, recurrente, balance
+    03-transactions.spec.ts     — 12 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance
     04-transfers.spec.ts        — 7 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default
     05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
     06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
@@ -136,10 +133,14 @@ e2e/
     12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
     13-quickpay-categories.spec.ts — 14 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno con cuota mensual, pre-relleno con saldo pendiente, saldo insuficiente en input de monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda
     14-ux-dots-fab.spec.ts         — 3 tests: FAB con SVG (no texto "+"), botón login muestra puntitos + "Entrando…" durante la carga, overlay de cierre de sesión con puntitos
-    15-credit-cards.spec.ts        — 20 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, calculadora de intereses en modal, total ARS, abrir desde estado vacío
+    15-credit-cards.spec.ts        — 21 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
 ```
 
-**141 tests en total — ~135 pasan**. Fallos conocidos: `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests; `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase. Tests de `09-charts` y el test de presupuesto en `06-settings` fallan cuando el seed data es de un mes anterior al actual (el filtro `periodTxs` con el período por defecto no encuentra transacciones). Todos pasan en aislamiento o con seed data del mes corriente.
+**141 tests en total.** Fallos conocidos:
+- `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests.
+- `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase.
+- `15-credit-cards` "alerta de interés visible en la tarjeta cuando TNA está seteada" y "calculadora de intereses visible en modal de pago con TNA" fallan siempre desde `caef132`: la alerta y la calculadora requieren `minPayment` y esos tests solo cargan la TNA (verificado 2026-10-21).
+- Tests de `09-charts`, los 2 de presupuesto en `06-settings` y los 4 de `03-transactions` que abren un movimiento del seed (editar ×2, eliminar, deshacer) fallan cuando el seed data es de un mes anterior al actual (el filtro de período por defecto deja la lista vacía). `TRANSACTIONS_SEED` tiene fechas fijas de mayo 2026, así que desde junio fallan siempre (verificado 2026-10-21); pasan con seed data del mes corriente.
 
 ### Notas de arquitectura de búsqueda/filtros
 
@@ -176,8 +177,11 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 
 - **Módulo subida resumen tarjeta** — plan en `credit-card-summary-upload-plan.md`; requiere correr SQL de setup (`merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar.
 - **Migrations Supabase versionadas** — mover schema a `supabase/migrations/*.sql` con Supabase CLI (README lo lista como TODO).
+- **Bugs de datos** — plan en `data-bugs-plan.md`: editar un movimiento cambiándole la cuenta no revierte la cuenta original (bug 2). Más dos hallazgos menores (fecha "de hoy" en UTC; editar un pago de tarjeta pierde `credit_card_id`).
 
 ## Descartado (con razón documentada)
+
+- **Transacciones recurrentes ("Repetir: Cada mes / Cada semana")** ❌ eliminadas de la web 2026-10-21. No se usaban y el diseño generaba duplicados (fechas en UTC + detección de copias por nota/cuenta/monto). Cómo funcionaba, fallas verificadas, fix de fechas probado, tests y diseño recomendado para reincorporarla: `recurring-transactions-archive.md` (código original en el commit `7145274`). La columna `transactions.recurring` y el parámetro `p_recurring` del RPC siguen en la DB (la web manda `null`). FinAngel-Mobile la mantiene por decisión del 2026-10-21 (anotado en su propio `CLAUDE.md`).
 
 - **SEC-1 (cifrado AES-256-GCM para localStorage) + SEC-2 (LockScreen + PIN)** ❌ descartados 2026-08-25. La premisa original del plan asumía que localStorage guardaba datos financieros sensibles; en realidad todos los saldos, transacciones, cuentas, deudas y tarjetas viven en Supabase con RLS por usuario. En localStorage solo persisten `finangel:tweaks` (preferencias UI) y `finangel:theme` — sin valor sensible. El único escenario que SEC-1+SEC-2 protegían era "alguien mira los saldos por encima del hombro con la sesión abierta", y eso ya está cubierto por el toggle de privacidad (`privacy` en `Tweaks`, aplicado en `fmtMoney`). No hay credenciales bancarias ni ejecución de transferencias — la app es visual.
 - **Ledger Fase 3 (inmutabilidad estricta de amount/date)** ❌ descartada al escribir el plan: corregir un monto mal ingresado es un caso común y válido para app personal. Residuo del intento inicial (trigger `enforce_tx_immutability`) eliminado en el cleanup 2026-08-25.
@@ -239,3 +243,4 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 - FX inputs sync fix (`useEffect` en `SettingsPanel`).
 - `FaDots` spinner en el overlay de cierre de sesión.
 - `TransactionCard` extraído como componente co-located en `TransactionList.tsx`.
+- "Borrar todos los datos" (solo dev) borra también las tarjetas en Supabase (`clearUserData`); antes solo se vaciaban en pantalla y volvían al recargar. Los presupuestos se conservan a propósito. Test E2E con recarga en `15-credit-cards.spec.ts` (2026-10-21).
