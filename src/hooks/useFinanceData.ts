@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { autoGenerateRecurring } from '../lib/finance/recurring';
 import { catById } from '../data/constants';
 import { loadOrder, saveOrder, applyOrder } from '../data/utils';
 import {
@@ -31,21 +30,9 @@ export const useFinanceData = (
     setLoading(true);
     Promise.all([fetchAccounts(), fetchTransactions(), fetchBudgets()])
       .then(([accs, txs, bgs]) => {
-        const generated = autoGenerateRecurring(txs, new Date());
-        if (generated.length === 0) {
-          setAccounts(applyOrder(accs, loadOrder(ACCOUNT_ORDER_KEY))); setTransactions(txs); setBudgets(bgs);
-          return;
-        }
-        const updatedAccounts = applyOrder(accs.map(a => {
-          const delta = generated.filter(t => t.accountId === a.id).reduce((s, t) => s + t.amount, 0);
-          return delta !== 0 ? { ...a, balance: a.balance + delta } : a;
-        }), loadOrder(ACCOUNT_ORDER_KEY));
-        setAccounts(updatedAccounts);
-        setTransactions([...generated, ...txs]);
+        setAccounts(applyOrder(accs, loadOrder(ACCOUNT_ORDER_KEY)));
+        setTransactions(txs);
         setBudgets(bgs);
-        Promise.all(
-          generated.map(t => insertTransaction(t, session.user.id)),
-        ).catch(() => { setAccounts(accs); setTransactions(txs); });
       })
       .finally(() => setLoading(false));
   }, [session?.user.id]);

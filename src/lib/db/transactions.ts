@@ -5,14 +5,13 @@ import type { Transaction } from '../../types';
 interface TransactionRow {
   id: string; user_id: string; account_id: string;
   category_id: string; date: string; amount: number; note: string;
-  recurring: string | null; debt_id: string | null; credit_card_id: string | null;
+  debt_id: string | null; credit_card_id: string | null;
   transfer_group: string | null; created_at: string | null;
 }
 
 const toTransaction = (r: TransactionRow): Transaction => ({
   id: r.id, accountId: r.account_id, categoryId: r.category_id,
   date: r.date, amount: r.amount, note: r.note,
-  ...(r.recurring ? { recurring: r.recurring as Transaction['recurring'] } : {}),
   ...(r.debt_id ? { debtId: r.debt_id } : {}),
   ...(r.credit_card_id ? { creditCardId: r.credit_card_id } : {}),
   ...(r.transfer_group ? { transferGroup: r.transfer_group } : {}),
@@ -37,7 +36,8 @@ export const insertTransaction = async (tx: Transaction, userId: string): Promis
     p_amount:      tx.amount,
     p_date:        tx.date,
     p_note:        tx.note,
-    p_recurring:      tx.recurring ?? null,
+    // Columna de la funcionalidad de recurrentes (quitada de la web; la mobile todavía la usa).
+    p_recurring:      null,
     p_debt_id:        tx.debtId ?? null,
     p_credit_card_id: tx.creditCardId ?? null,
   });
@@ -67,7 +67,7 @@ export const updateTransaction = async (tx: Transaction): Promise<void> => {
   const { error } = await supabase.from('transactions').update({
     account_id: tx.accountId, category_id: tx.categoryId,
     date: tx.date, amount: tx.amount, note: tx.note,
-    recurring: tx.recurring ?? null, debt_id: tx.debtId ?? null,
+    debt_id: tx.debtId ?? null,
     credit_card_id: tx.creditCardId ?? null,
   }).eq('id', tx.id);
   if (error) throw error;

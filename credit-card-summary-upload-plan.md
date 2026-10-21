@@ -482,7 +482,7 @@ En los 3 temas (`warm.css`, `night.css`, `sticker.css`):
 
 ## Features bonus (post-MVP, no bloquean)
 
-1. **Detección de cuotas → recurrentes.** Si `installment.total > 1`, ofrecer checkbox "crear compromiso futuro de N cuotas restantes" que genere N transacciones futuras con `recurring: undefined` (fechas explícitas) o agregarlas a un panel "compromisos futuros" que descuente del presupuesto proyectado.
+1. **Detección de cuotas → compromisos futuros.** Si `installment.total > 1`, ofrecer checkbox "crear compromiso futuro de N cuotas restantes" que genere N transacciones futuras con fechas explícitas (la funcionalidad de recurrentes se eliminó el 2026-10-21; ver `recurring-transactions-archive.md`) o agregarlas a un panel "compromisos futuros" que descuente del presupuesto proyectado.
 2. **Reconciliación con `currentBalance`.** Después del import, comparar `sum(imports)` con `card.currentBalance` actual. Si difiere >5%, alerta "el resumen suma $X pero el saldo actual de la tarjeta en la app es $Y; ¿faltan movimientos manuales?".
 3. **Aprendizaje incremental.** Ya está en el plan (`useMerchantMappings`) — con 2-3 resúmenes el mapeo cubre 90% de los comercios habituales.
 

@@ -23,7 +23,6 @@ export interface Transaction {
   categoryId: string;
   amount: number;
   note: string;
-  recurring?: 'monthly' | 'weekly';
   debtId?: string;
   creditCardId?: string;
   transferGroup?: string;

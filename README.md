@@ -100,7 +100,6 @@ src/
   lib/
     supabase.ts        cliente
     db/                CRUD por dominio (accounts, transactions, budgets, debts, creditCards, seed)
-    finance/           lógica pura (recurring txs)
   data/
     constants.ts       categorías, FX rates, seed, mascot copy
     utils.ts           fmtMoney, fmtDate, loadState/saveState

@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { CATEGORIES } from '../../data/constants';
 import { fmtMoney } from '../../data/utils';
 
-import type { Account, Debt, Transaction, TransactionInput } from '../../types';
+import type { Account, Debt, TransactionInput } from '../../types';
 
 interface AddTransactionModalProps {
   accounts: Account[];
@@ -37,7 +37,6 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
   const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
   const [amountError, setAmountError] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
-  const [recurring, setRecurring] = useState<Transaction['recurring'] | ''>(editing?.recurring ?? '');
   const [debtId, setDebtId] = useState(editing?.debtId ?? preselectedDebtId ?? '');
 
   const selectedAccount = accounts.find(a => a.id === accountId);
@@ -71,7 +70,6 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
         categoryId: kind === 'income' ? 'ingreso' : categoryId,
         amount: signed,
         note: cleanNote,
-        ...(recurring ? { recurring } : {}),
         ...(validDebtId ? { debtId: validDebtId } : {}),
       },
       validDebtId,
@@ -234,20 +232,6 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
               />
             </label>
           </div>
-
-          <label className="fa-field">
-            <span className="fa-field-label">Repetir</span>
-            <select
-              className="fa-input"
-              value={recurring}
-              onChange={e => setRecurring(e.target.value as Transaction['recurring'] | '')}
-              style={{ fontSize: 13 }}
-            >
-              <option value="">No repetir</option>
-              <option value="monthly">Cada mes 📅</option>
-              <option value="weekly">Cada semana 🔁</option>
-            </select>
-          </label>
 
           <div className="fa-modal-actions">
             {onDelete && (
