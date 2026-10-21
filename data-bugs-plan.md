@@ -1,16 +1,16 @@
 # Plan — Bugs de datos pendientes (detectados el 2026-10-20)
 
-> Encontrados durante el análisis que dio origen a `claude-code-agents-guide.md` (§8). **Al 2026-10-21: el 1 quedó resuelto al eliminar la funcionalidad de recurrentes y el 3 está corregido; el 2 sigue pendiente.**
-> Verificación: el bug 1 se reprodujo ejecutando una copia literal de la función con la zona horaria de esta máquina (UTC-3). El 3 se confirmó con un test E2E antes de corregirlo. El 2 surge de leer el código (revisado de nuevo el 2026-10-21): confírmalo primero con un test.
-> Próximo: **bug 2**.
+> Encontrados durante el análisis que dio origen a `claude-code-agents-guide.md` (§8). **Al 2026-10-21 los tres están resueltos: el 1 al eliminar la funcionalidad de recurrentes; el 2 y el 3 con fix y test E2E.**
+> Verificación: el bug 1 se reprodujo ejecutando una copia literal de la función con la zona horaria de esta máquina (UTC-3). El 2 y el 3 se confirmaron con un test E2E en rojo antes de corregirlos.
+> Quedan solo los hallazgos menores (al final del documento).
 
 ## Resumen
 
 | # | Bug | Impacto | Dónde | ¿Mobile? |
 |---|---|---|---|---|
 | 1 | ✅ ~~Recurrentes duplicadas por fechas en UTC~~ | Resuelto el 2026-10-21: se eliminó la funcionalidad de la web | ver `recurring-transactions-archive.md` | Se mantiene en mobile (anotado en su repo) |
-| 2 | Editar un movimiento cambiándole la cuenta | Saldos incorrectos en las dos cuentas | `src/hooks/useFinanceData.ts:128-146` | Revisar el equivalente |
-| 3 | ✅ ~~"Borrar todos los datos" no borra las tarjetas~~ | Corregido el 2026-10-21 (la opción solo existe en dev) | `src/lib/db/seed.ts` | Revisar el equivalente |
+| 2 | ✅ ~~Editar un movimiento cambiándole la cuenta~~ | Corregido el 2026-10-21 | `src/hooks/useFinanceData.ts` (`upsertTx`) | Mismo bug en mobile (anotado en su repo) |
+| 3 | ✅ ~~"Borrar todos los datos" no borra las tarjetas~~ | Corregido el 2026-10-21 (la opción solo existe en dev) | `src/lib/db/seed.ts` | Mismo bug en mobile (anotado en su repo) |
 
 ---
 
@@ -38,35 +38,27 @@ order by date desc;
 
 ---
 
-## 2. Editar un movimiento cambiándole la cuenta 🔴
+## 2. Editar un movimiento cambiándole la cuenta ✅ (corregido el 2026-10-21)
 
-### Qué pasa
+### Qué pasaba
 
-Al editar, el ajuste de saldo se calcula como `delta = monto nuevo − monto viejo` y se aplica **solo a la cuenta nueva**. La cuenta original nunca se revierte.
+Al editar, el ajuste de saldo se calculaba como `delta = monto nuevo − monto viejo` y se aplicaba **solo a la cuenta nueva**. La cuenta original nunca se revertía.
 
-Ejemplo: un gasto de $1.000 en "Cuenta ARS" se edita y se pasa a "Mercado Pago" sin cambiar el monto → delta = 0 → no cambia ningún saldo: "Cuenta ARS" sigue descontada y "Mercado Pago" nunca se descuenta.
-
-El caso es alcanzable desde la UI: el modal de edición deja elegir otra cuenta (la validación de saldo de `AddTransactionModal.tsx` ya contempla `isSameAccount`).
+Ejemplo: un gasto de $1.000 en "Cuenta ARS" se editaba y se pasaba a "Mercado Pago" sin cambiar el monto → delta = 0 → no cambiaba ningún saldo: "Cuenta ARS" seguía descontada y "Mercado Pago" nunca se descontaba. El caso es alcanzable desde la UI: el modal de edición deja elegir otra cuenta.
 
 ### Causa
 
-`src/hooks/useFinanceData.ts`, rama de edición de `upsertTx`:
+`src/hooks/useFinanceData.ts`, rama de edición de `upsertTx`: el delta se sumaba solo a `updated.accountId` y solo se persistía el saldo de esa cuenta.
 
-- Líneas 132-135: el delta se suma solo a `updated.accountId`.
-- Líneas 138-141: solo se persiste el saldo de esa cuenta.
+### Resolución
 
-### Fix propuesto
-
-- Si `existing.accountId === updated.accountId`: igual que hoy.
-- Si cambió: cuenta vieja `balance − existing.amount`, cuenta nueva `balance + updated.amount`, y persistir **las dos**.
-- Mejor, cuando haya migraciones versionadas: una RPC `update_transaction` que haga ese ajuste por delta dentro de una transacción en la DB, como ya hace `register_transaction` al insertar. Así también se evita pisar saldos si la app mobile está abierta al mismo tiempo (guía §8, bug 5).
-- Revisar si pasa lo mismo al editar pagos de deuda o tarjeta y cambiarles la cuenta.
+- `upsertTx` revierte el monto viejo en la cuenta original (`balance − existing.amount`), aplica el nuevo en la cuenta nueva (`balance + updated.amount`) y persiste el saldo de **las dos**. Si la cuenta es la misma, equivale al delta de antes.
+- Los pagos de deuda pasan por el mismo `upsertTx`, así que quedan cubiertos (el ajuste de la deuda depende solo del monto). Los pagos de tarjeta tienen aparte el hallazgo menor de `credit_card_id`.
+- Mejora futura, cuando haya migraciones versionadas: una RPC `update_transaction` que haga el ajuste dentro de una transacción en la DB, como ya hace `register_transaction` al insertar. Así también se evita pisar saldos si la app mobile está abierta al mismo tiempo (guía §8, bug 5).
 
 ### Test (Playwright, en `e2e/tests/03-transactions.spec.ts`)
 
-1. Con seed: anotar los saldos de dos cuentas ARS.
-2. Editar un gasto de la cuenta A, pasarlo a la cuenta B sin cambiar el monto y guardar.
-3. Esperado: el saldo de A sube el monto del gasto y el de B baja lo mismo. Recargar (`page.reload()`) y verificar que se mantiene.
+"editar un gasto cambiándole la cuenta mueve el monto entre las dos cuentas": crea un gasto de $1.000 en Cuenta ARS (con fecha de hoy, para que aparezca en la lista del mes; el seed es de mayo), lo pasa a Mercado Pago (ARS +1.000, MP −1.000), después le cambia el monto a $1.500 sin cambiar la cuenta (MP −500 más) y verifica los saldos tras recargar. Falló antes del fix (Cuenta ARS quedaba en $539.320 en vez de $540.320) y pasa después.
 
 ---
 
@@ -102,9 +94,9 @@ El caso es alcanzable desde la UI: el modal de edición deja elegir otra cuenta 
 - [x] Bug 1: resuelto eliminando la funcionalidad de la web (2026-10-21)
 - [ ] Bug 1: correr la query de duplicados y limpiar desde la app lo que corresponda
 - [x] Bug 3: test con recarga (en rojo: 41 tarjetas) → fix → verde (2026-10-21)
-- [ ] Bug 2: test E2E (en rojo) → fix → verde
-- [ ] Actualizar CLAUDE.md y la memoria al cerrar
+- [x] Bug 2: test E2E (en rojo) → fix → verde (2026-10-21)
+- [x] Actualizar CLAUDE.md y la memoria al cerrar
 
 ## Cómo retomarlo
 
-En una sesión nueva: *"Arreglemos el bug 2 de `data-bugs-plan.md`: primero el test en rojo."*
+Los tres bugs están resueltos. Si se retoma algo, son los hallazgos menores: *"Arreglemos los hallazgos menores de `data-bugs-plan.md`: primero el test en rojo."*

@@ -165,3 +165,47 @@ test('balance de cuenta cambia al agregar gasto', async ({ withSeed: app }) => {
   const balanceAfter = await firstCard.locator('.fa-account-balance').innerText();
   expect(balanceAfter).not.toBe(balanceBefore);
 });
+
+test('editar un gasto cambiándole la cuenta mueve el monto entre las dos cuentas', async ({ withSeed: app }) => {
+  // Saldo ARS como número: "$ 540.320" → 540320
+  const saldo = async (cuenta: string) => Number(
+    (await app.getAccounts().filter({ hasText: cuenta }).locator('.fa-account-balance').innerText()).replace(/[^\d-]/g, ''),
+  );
+
+  // Gasto nuevo: queda con fecha de hoy y aparece en la lista del mes actual (el seed es de mayo)
+  await app.openAddTransaction();
+  await fillTransactionForm(app.page, {
+    kind: 'Gasto',
+    amount: '1000',
+    accountName: 'Cuenta ARS',
+    note: 'Cambio de cuenta e2e',
+  });
+  await submitTransactionForm(app.page);
+  const tx = app.getTransactionItems().filter({ hasText: 'Cambio de cuenta e2e' });
+  await expect(tx).toBeVisible();
+
+  const origenAntes  = await saldo('Cuenta ARS');
+  const destinoAntes = await saldo('Mercado Pago');
+
+  // Editar: pasarlo a Mercado Pago sin cambiar el monto
+  await tx.click();
+  await app.page.locator('.fa-modal .fa-account-chip', { hasText: 'Mercado Pago' }).click();
+  await submitTransactionForm(app.page, true);
+
+  // La cuenta original recupera el gasto y la nueva lo descuenta
+  await expect.poll(() => saldo('Cuenta ARS')).toBe(origenAntes + 1000);
+  await expect.poll(() => saldo('Mercado Pago')).toBe(destinoAntes - 1000);
+
+  // Editar otra vez sin cambiar la cuenta, solo el monto: se aplica la diferencia
+  await tx.click();
+  await app.page.locator('.fa-modal .fa-amount-input input').fill('1500');
+  await submitTransactionForm(app.page, true);
+  await expect.poll(() => saldo('Mercado Pago')).toBe(destinoAntes - 1500);
+  await expect.poll(() => saldo('Cuenta ARS')).toBe(origenAntes + 1000);
+
+  // Y queda guardado en la base
+  await app.page.reload();
+  await expect(app.getAccounts().first()).toBeVisible({ timeout: 10_000 });
+  await expect.poll(() => saldo('Cuenta ARS')).toBe(origenAntes + 1000);
+  await expect.poll(() => saldo('Mercado Pago')).toBe(destinoAntes - 1500);
+});
