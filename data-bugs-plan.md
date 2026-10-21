@@ -1,8 +1,8 @@
 # Plan — Bugs de datos pendientes (detectados el 2026-10-20)
 
-> Encontrados durante el análisis que dio origen a `claude-code-agents-guide.md` (§8). **El 1 quedó resuelto el 2026-10-21 al eliminar la funcionalidad de recurrentes; el 2 y el 3 siguen pendientes.**
-> Verificación: el bug 1 se reprodujo ejecutando una copia literal de la función con la zona horaria de esta máquina (UTC-3). Los bugs 2 y 3 surgen de leer el código (revisado de nuevo el 2026-10-21): confírmalos primero con un test.
-> Orden sugerido: **3 → 2** (el 3 es el más simple).
+> Encontrados durante el análisis que dio origen a `claude-code-agents-guide.md` (§8). **Al 2026-10-21: el 1 quedó resuelto al eliminar la funcionalidad de recurrentes y el 3 está corregido; el 2 sigue pendiente.**
+> Verificación: el bug 1 se reprodujo ejecutando una copia literal de la función con la zona horaria de esta máquina (UTC-3). El 3 se confirmó con un test E2E antes de corregirlo. El 2 surge de leer el código (revisado de nuevo el 2026-10-21): confírmalo primero con un test.
+> Próximo: **bug 2**.
 
 ## Resumen
 
@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | 1 | ✅ ~~Recurrentes duplicadas por fechas en UTC~~ | Resuelto el 2026-10-21: se eliminó la funcionalidad de la web | ver `recurring-transactions-archive.md` | Se mantiene en mobile (anotado en su repo) |
 | 2 | Editar un movimiento cambiándole la cuenta | Saldos incorrectos en las dos cuentas | `src/hooks/useFinanceData.ts:128-146` | Revisar el equivalente |
-| 3 | "Borrar todos los datos" no borra las tarjetas | Las tarjetas reaparecen al recargar | `src/lib/db/seed.ts:23-29`, `src/App.tsx:487` | Revisar el equivalente |
+| 3 | ✅ ~~"Borrar todos los datos" no borra las tarjetas~~ | Corregido el 2026-10-21 (la opción solo existe en dev) | `src/lib/db/seed.ts` | Revisar el equivalente |
 
 ---
 
@@ -70,28 +70,23 @@ El caso es alcanzable desde la UI: el modal de edición deja elegir otra cuenta 
 
 ---
 
-## 3. "Borrar todos los datos" no borra las tarjetas de crédito 🔴
+## 3. "Borrar todos los datos" no borra las tarjetas de crédito ✅ (corregido el 2026-10-21)
 
-### Qué pasa
+### Qué pasaba
 
-"Borrar todos los datos" vacía las tarjetas solo en pantalla: en Supabase siguen ahí y **reaparecen al recargar**. Los presupuestos tampoco se borran (ni en pantalla ni en la DB); confirma si eso es intencional.
-
-El test "estado vacío muestra botón agregar tarjeta" (`e2e/tests/15-credit-cards.spec.ts:8`) pasa igual porque no recarga la página después de borrar. De paso, cada corrida de la suite acumula tarjetas en el usuario de prueba.
+"Borrar todos los datos" (opción que solo existe en dev: está dentro de `import.meta.env.DEV` en `SettingsPanel`) vaciaba las tarjetas solo en pantalla: en Supabase seguían ahí y **reaparecían al recargar**. El test "estado vacío muestra botón agregar tarjeta" no lo detectaba porque no recarga la página, y cada corrida de la suite acumulaba tarjetas en el usuario de prueba (había 41 al corregirlo).
 
 ### Causa
 
-- `src/lib/db/seed.ts:23-29`: `clearUserData` solo borra `accounts` y `debts`.
+- `src/lib/db/seed.ts`: `clearUserData` solo borraba `accounts` y `debts`.
 - `src/App.tsx:487`: `onClearAll` llama a `creditCards.clearCards()`, que solo vacía el estado local.
 
-### Fix propuesto
+### Resolución
 
-- En `clearUserData`, borrar también `credit_cards` (y `budgets`, si la intención es dejar todo vacío). Revisar las FK (por ejemplo `transactions.credit_card_id`) para elegir el orden de borrado.
-- Para que no quede nada a medias, mejor una RPC `clear_user_data` que borre todo en una sola transacción.
-- Si se borran los presupuestos, limpiar también su estado local en `handleClearAll`.
-
-### Test (Playwright, en `e2e/tests/15-credit-cards.spec.ts`)
-
-Crear una tarjeta → "Borrar todos los datos" → `page.reload()` → la sección de tarjetas muestra el estado vacío.
+- `clearUserData` borra también `credit_cards`, después de `accounts` y `debts`. El test incluye una tarjeta con un pago registrado (transacción con `credit_card_id`) y no hubo problemas de claves foráneas.
+- **Los presupuestos se conservan a propósito** (decisión del usuario, 2026-10-21); quedó comentado en `clearUserData`.
+- Test E2E en `e2e/tests/15-credit-cards.spec.ts` ("borrar todos los datos elimina las tarjetas en la base y no vuelven al recargar"): crea una tarjeta, registra un pago, borra todo, recarga y verifica que la respuesta de `credit_cards` venga vacía. Espera la respuesta real porque `useCreditCardsData` arranca con la lista vacía mientras carga, y mirar solo la pantalla podía dar un falso positivo. Falló antes del fix (41 tarjetas) y pasa después.
+- No se hizo la RPC `clear_user_data` para que el borrado sea atómico: para una opción solo de dev no hace falta.
 
 ---
 
@@ -106,10 +101,10 @@ Crear una tarjeta → "Borrar todos los datos" → `page.reload()` → la secci�
 
 - [x] Bug 1: resuelto eliminando la funcionalidad de la web (2026-10-21)
 - [ ] Bug 1: correr la query de duplicados y limpiar desde la app lo que corresponda
-- [ ] Bug 3: test con `page.reload()` (en rojo) → fix → verde
+- [x] Bug 3: test con recarga (en rojo: 41 tarjetas) → fix → verde (2026-10-21)
 - [ ] Bug 2: test E2E (en rojo) → fix → verde
 - [ ] Actualizar CLAUDE.md y la memoria al cerrar
 
 ## Cómo retomarlo
 
-En una sesión nueva: *"Arreglemos los bugs de `data-bugs-plan.md`, empezando por el 3: primero el test en rojo."*
+En una sesión nueva: *"Arreglemos el bug 2 de `data-bugs-plan.md`: primero el test en rojo."*

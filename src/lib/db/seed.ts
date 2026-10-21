@@ -21,9 +21,11 @@ export const seedUserData = async (userId: string): Promise<void> => {
 };
 
 export const clearUserData = async (): Promise<void> => {
-  // RLS garantiza que solo se borran los datos del usuario actual.
+  // RLS garantiza que solo se borran los datos del usuario actual. Los presupuestos se conservan a propósito.
   const { error } = await supabase.from('accounts').delete().neq('id', '');
   if (error) throw error;
   const { error: debtErr } = await supabase.from('debts').delete().neq('id', '');
   if (debtErr) throw debtErr;
+  const { error: cardErr } = await supabase.from('credit_cards').delete().neq('id', '');
+  if (cardErr) throw cardErr;
 };
