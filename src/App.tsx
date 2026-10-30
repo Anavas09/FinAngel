@@ -175,9 +175,11 @@ const App = () => {
           {accounts.length === 0 ? (
             <div className="fa-empty">
               <p>No hay cuentas todavía.</p>
-              <button className="fa-btn fa-btn-primary" onClick={finance.handleLoadSeed}>
-                Cargar datos de ejemplo
-              </button>
+              {import.meta.env.DEV && (
+                <button className="fa-btn fa-btn-primary" onClick={finance.handleLoadSeed}>
+                  Cargar datos de ejemplo
+                </button>
+              )}
             </div>
           ) : (
             <DndContext
