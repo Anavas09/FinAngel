@@ -246,6 +246,34 @@ test('registrar pago muestra toast confirmación', async ({ withSeed: app }) => 
   await expect(app.getToast()).toContainText('Pago registrado', { timeout: 5_000 });
 });
 
+test('deshacer la eliminación de un pago de tarjeta vuelve a descontar el pago una sola vez', async ({ withSeed: app }) => {
+  await app.openAddCreditCard();
+  await fillCreditCardForm(app.page, {
+    name: 'Visa undo pago',
+    creditLimit: '100000',
+    currentBalance: '30000',
+  });
+  await submitCreditCardForm(app.page);
+
+  const card = app.getCreditCards().filter({ hasText: 'Visa undo pago' });
+  await card.getByTitle('Registrar pago').click();
+  const modal = app.page.locator('.fa-modal');
+  const amountInput = modal.locator('.fa-amount-input input');
+  await amountInput.clear();
+  await amountInput.fill('10000');
+  await modal.getByRole('button', { name: 'Registrar pago' }).click();
+  await expect(modal).not.toBeVisible({ timeout: 5_000 });
+  await expect(card).toContainText('20% utilizado');
+
+  await app.getTransactionItems().filter({ hasText: 'Pago tarjeta Visa undo pago' }).first().click();
+  await app.page.locator('.fa-modal').getByRole('button', { name: 'Eliminar' }).click();
+  await expect(card).toContainText('30% utilizado', { timeout: 5_000 });
+
+  // Deshacer: la tarjeta debe volver a 20% (antes bajaba a 10% por descontar dos veces)
+  await app.getToast().getByRole('button', { name: 'Deshacer' }).click();
+  await expect(card).toContainText('20% utilizado', { timeout: 5_000 });
+});
+
 test('calculadora de intereses visible en modal de pago con TNA', async ({ withSeed: app }) => {
   await app.openAddCreditCard();
   await fillCreditCardForm(app.page, {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchDebts, insertDebt, updateDebt, deleteDebtById } from '../lib/db';
 import { loadOrder, saveOrder, applyOrder } from '../data/utils';
@@ -14,6 +14,9 @@ export const useDebtsData = (
   fxRates: Record<Currency, number>,
 ) => {
   const [debts, setDebts] = useState<Debt[]>([]);
+  // Los callbacks de deshacer sobreviven al render; leen siempre el estado más reciente
+  const debtsRef = useRef(debts);
+  debtsRef.current = debts;
 
   useEffect(() => {
     if (!session) return;
@@ -37,7 +40,7 @@ export const useDebtsData = (
   };
 
   const editDebt = (id: string, fields: Partial<Omit<Debt, 'id' | 'createdAt'>>) => {
-    const prev = debts.find(d => d.id === id);
+    const prev = debtsRef.current.find(d => d.id === id);
     if (!prev) return;
     const updated = { ...prev, ...fields };
     setDebts(ds => ds.map(d => d.id === id ? updated : d));
@@ -70,7 +73,7 @@ export const useDebtsData = (
   };
 
   const partialPayDebt = (id: string, amount: number) => {
-    const debt = debts.find(d => d.id === id);
+    const debt = debtsRef.current.find(d => d.id === id);
     if (!debt) return;
     const newRemaining = Math.max(0, debt.remainingAmount - Math.abs(amount));
     editDebt(id, {
@@ -81,7 +84,7 @@ export const useDebtsData = (
 
   // delta > 0: more paid (reduce remaining), delta < 0: less paid (restore remaining)
   const adjustDebtPayment = (id: string, delta: number) => {
-    const debt = debts.find(d => d.id === id);
+    const debt = debtsRef.current.find(d => d.id === id);
     if (!debt) return;
     const newRemaining = Math.max(0, debt.remainingAmount - delta);
     editDebt(id, {

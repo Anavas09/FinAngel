@@ -200,6 +200,28 @@ test('eliminar pago de deuda restaura el remainingAmount de la deuda', async ({ 
   await expect(debtCard.getByText('0% pagado')).toBeVisible({ timeout: 5_000 });
 });
 
+test('deshacer la eliminación de un pago de deuda vuelve a descontar el pago una sola vez', async ({ withSeed: app }) => {
+  await app.openAddDebt();
+  await fillDebtForm(app.page, { name: 'Deuda undo pago', totalAmount: '5000' });
+  await submitDebtForm(app.page);
+
+  const debtCard = app.getDebts().filter({ hasText: 'Deuda undo pago' });
+  await debtCard.getByTitle('Registrar pago').click();
+  const modal = app.page.locator('.fa-modal');
+  await modal.locator('.fa-amount-input input').fill('1000');
+  await modal.getByRole('button', { name: 'Registrar pago' }).click();
+  await expect(modal).not.toBeVisible({ timeout: 5_000 });
+  await expect(debtCard.getByText('20% pagado')).toBeVisible();
+
+  await app.getTransactionItems().filter({ hasText: 'Pago de Deuda undo pago' }).first().click();
+  await app.page.locator('.fa-modal').getByRole('button', { name: 'Eliminar' }).click();
+  await expect(debtCard.getByText('0% pagado')).toBeVisible({ timeout: 5_000 });
+
+  // Deshacer: la deuda debe volver a 20% (antes bajaba a 40% por descontar dos veces)
+  await app.getToast().getByRole('button', { name: 'Deshacer' }).click();
+  await expect(debtCard.getByText('20% pagado')).toBeVisible({ timeout: 5_000 });
+});
+
 // ─── Eliminar transacción restaura el balance ─────────────────────────────────
 
 test('eliminar transacción restaura el balance de la cuenta', async ({ withSeed: app }) => {

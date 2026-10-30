@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchCreditCards, insertCreditCard, updateCreditCard, deleteCreditCardById } from '../lib/db';
 import { loadOrder, saveOrder, applyOrder } from '../data/utils';
@@ -14,6 +14,9 @@ export const useCreditCardsData = (
   fxRates: Record<Currency, number>,
 ) => {
   const [cards, setCards] = useState<CreditCard[]>([]);
+  // Los callbacks de deshacer sobreviven al render; leen siempre el estado más reciente
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
 
   useEffect(() => {
     if (!session) return;
@@ -37,7 +40,7 @@ export const useCreditCardsData = (
   };
 
   const editCard = (id: string, fields: Partial<Omit<CreditCard, 'id' | 'createdAt'>>) => {
-    const prev = cards.find(c => c.id === id);
+    const prev = cardsRef.current.find(c => c.id === id);
     if (!prev) return;
     const updated = { ...prev, ...fields };
     setCards(cs => cs.map(c => c.id === id ? updated : c));
@@ -69,14 +72,14 @@ export const useCreditCardsData = (
   const reopenCard     = (id: string) => editCard(id, { status: 'active' });
 
   const partialPayCard = (id: string, amount: number) => {
-    const card = cards.find(c => c.id === id);
+    const card = cardsRef.current.find(c => c.id === id);
     if (!card) return;
     editCard(id, { currentBalance: Math.max(0, card.currentBalance - Math.abs(amount)) });
   };
 
   // delta > 0: more paid (reduce balance), delta < 0: less paid (restore balance)
   const adjustCardPayment = (id: string, delta: number) => {
-    const card = cards.find(c => c.id === id);
+    const card = cardsRef.current.find(c => c.id === id);
     if (!card) return;
     editCard(id, { currentBalance: Math.max(0, card.currentBalance - delta) });
   };
