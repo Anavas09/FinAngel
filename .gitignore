@@ -35,3 +35,8 @@ test-results/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code (archivos locales o temporales)
+.claude/session-*
+.claude/history*
+.claude/*.local.json
