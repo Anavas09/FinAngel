@@ -30,6 +30,14 @@ export const TransferModal = ({ accounts, fxRates, onClose, onSave, privacy }: T
       ? (parsedAmount * (fxRates[fromAccount.currency] ?? 1)) / (fxRates[toAccount.currency] ?? 1)
       : null;
 
+  const fillAll = () => {
+    if (!fromAccount) return;
+    // Trunca a 2 decimales (nunca por encima del saldo) y usa coma decimal como se escribe a mano
+    const total = Math.floor(fromAccount.balance * 100 + 1e-6) / 100;
+    setAmount(String(total).replace('.', ','));
+    setAmountError(false);
+  };
+
   const setError = () => { setAmountError(true); amountRef.current?.focus(); };
 
   const submit = (e: React.FormEvent) => {
@@ -64,7 +72,7 @@ export const TransferModal = ({ accounts, fxRates, onClose, onSave, privacy }: T
                   key={a.id}
                   type="button"
                   className={`fa-account-chip ${fromId === a.id ? 'active' : ''}`}
-                  onClick={() => { setFromId(a.id); setAmountError(false); if (toId === a.id) setToId(accounts.find(x => x.id !== a.id)?.id ?? ''); }}
+                  onClick={() => { if (a.id !== fromId) setAmount(''); setFromId(a.id); setAmountError(false); if (toId === a.id) setToId(accounts.find(x => x.id !== a.id)?.id ?? ''); }}
                   style={{ '--swatch': a.color } as React.CSSProperties}
                 >
                   <span>{a.emoji}</span> {a.name}
@@ -113,6 +121,14 @@ export const TransferModal = ({ accounts, fxRates, onClose, onSave, privacy }: T
                 placeholder="0"
                 autoFocus
               />
+              <button
+                type="button"
+                className="fa-link"
+                onClick={fillAll}
+                disabled={!fromAccount || fromAccount.balance <= 0}
+              >
+                Todo
+              </button>
               <span className="fa-amount-ccy">{fromAccount?.currency}</span>
             </div>
             {amountError && (

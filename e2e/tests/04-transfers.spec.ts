@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/index';
-import { fillTransferForm, submitTransferForm } from '../helpers/modals';
+import { fillAccountForm, submitAccountForm, fillTransferForm, submitTransferForm } from '../helpers/modals';
 
 test('transferencia crea dos transacciones en la lista', async ({ withSeed: app }) => {
   const countBefore = await app.getTransactionItems().count();
@@ -120,4 +120,58 @@ test('nota vacía usa "Transferencia" como default', async ({ withSeed: app }) =
   // Las transacciones creadas tienen nota "Transferencia"
   await expect(app.page.locator('.fa-tx-note', { hasText: 'Transferencia' }).first())
     .toBeVisible({ timeout: 8_000 });
+});
+
+// ─── Botón "Todo" ─────────────────────────────────────────────────────────────
+
+test('botón Todo rellena el monto con el saldo de la cuenta origen', async ({ withSeed: app }) => {
+  await app.openTransfer();
+  const modal = app.page.locator('.fa-modal');
+
+  // Mercado Pago tiene saldo 86450 ARS en seed
+  await modal.locator('.fa-field', { hasText: 'Desde' })
+    .locator('.fa-account-chip', { hasText: 'Mercado Pago' }).click();
+  await modal.getByRole('button', { name: 'Todo', exact: true }).click();
+
+  await expect(modal.locator('.fa-amount-input input')).toHaveValue('86450');
+});
+
+test('transferir con el botón Todo no da error de saldo insuficiente', async ({ withSeed: app }) => {
+  await app.openTransfer();
+  const modal = app.page.locator('.fa-modal');
+
+  await modal.locator('.fa-field', { hasText: 'Desde' })
+    .locator('.fa-account-chip', { hasText: 'Mercado Pago' }).click();
+  await modal.getByRole('button', { name: 'Todo', exact: true }).click();
+  await submitTransferForm(app.page);
+
+  await expect(modal).not.toBeVisible({ timeout: 8_000 });
+});
+
+test('cambiar la cuenta origen borra el monto', async ({ withSeed: app }) => {
+  await app.openTransfer();
+  const modal = app.page.locator('.fa-modal');
+  const desde = modal.locator('.fa-field', { hasText: 'Desde' });
+
+  await desde.locator('.fa-account-chip', { hasText: 'Mercado Pago' }).click();
+  await modal.getByRole('button', { name: 'Todo', exact: true }).click();
+  await expect(modal.locator('.fa-amount-input input')).toHaveValue('86450');
+
+  // Elige otra cuenta de origen
+  await desde.locator('.fa-account-chip:not(.active)').first().click();
+  await expect(modal.locator('.fa-amount-input input')).toHaveValue('');
+});
+
+test('botón Todo está deshabilitado si la cuenta origen tiene saldo cero', async ({ withSeed: app }) => {
+  await app.openAddAccount();
+  await fillAccountForm(app.page, { name: 'Cuenta vacía', balance: '0' });
+  await submitAccountForm(app.page);
+  await expect(app.getAccounts().filter({ hasText: 'Cuenta vacía' })).toBeVisible();
+
+  await app.openTransfer();
+  const modal = app.page.locator('.fa-modal');
+  await modal.locator('.fa-field', { hasText: 'Desde' })
+    .locator('.fa-account-chip', { hasText: 'Cuenta vacía' }).click();
+
+  await expect(modal.getByRole('button', { name: 'Todo', exact: true })).toBeDisabled();
 });
