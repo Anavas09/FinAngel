@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow con Superpowers
+
+- **Antes de actuar**, usar `superpowers:using-superpowers` para identificar qué skill se ajusta mejor a la tarea (debugging, TDD, planes, code review, etc.) e invocarla antes de responder o tocar código.
+- **Funcionalidades nuevas**: arrancar siempre con `superpowers:brainstorming` (refinar requisitos y diseño con el usuario) antes de escribir planes o código.
+
 ## Import style
 
 Three groups separated by a blank line:
@@ -122,7 +127,7 @@ e2e/
     01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
     03-transactions.spec.ts     — 13 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar)
-    04-transfers.spec.ts        — 7 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default
+    04-transfers.spec.ts        — 11 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default, botón Todo (rellena, transfiere sin error, cambiar origen borra monto, deshabilitado con saldo 0)
     05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
     06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
     07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
@@ -131,12 +136,12 @@ e2e/
     10-debts.spec.ts            — 14 tests: estado vacío, crear mínima/completa, max chars, pendiente default, editar, pagar, eliminar+undo, vencida, total ARS
     11-render-stability.spec.ts — 8 tests: diagnóstico de parpadeos al cambiar de pestaña (baseline requests, spinner re-aparece, re-fetch post-carga, FX mount-only, total estable, MutationObserver, timing)
     12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
-    13-quickpay-categories.spec.ts — 14 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno con cuota mensual, pre-relleno con saldo pendiente, saldo insuficiente en input de monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda
+    13-quickpay-categories.spec.ts — 15 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno con cuota mensual, pre-relleno con saldo pendiente, saldo insuficiente en input de monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda, deshacer eliminar pago no descuenta dos veces
     14-ux-dots-fab.spec.ts         — 3 tests: FAB con SVG (no texto "+"), botón login muestra puntitos + "Entrando…" durante la carga, overlay de cierre de sesión con puntitos
-    15-credit-cards.spec.ts        — 21 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
+    15-credit-cards.spec.ts        — 22 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, deshacer eliminar pago no descuenta dos veces, calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
 ```
 
-**142 tests en total.** Fallos conocidos:
+**148 tests en total.** Fallos conocidos:
 - `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests.
 - `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase.
 - `15-credit-cards` "alerta de interés visible en la tarjeta cuando TNA está seteada" y "calculadora de intereses visible en modal de pago con TNA" fallan siempre desde `caef132`: la alerta y la calculadora requieren `minPayment` y esos tests solo cargan la TNA (verificado 2026-10-21).
@@ -172,6 +177,7 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 ## Planned features (con plan escrito, no implementado)
 
 - **Módulo de subida de resumen de tarjeta (PDF → regex → preview editable → bulk insert)** — plan completo en `credit-card-summary-upload-plan.md`. Decisiones tomadas: **regex por banco** (descartada Claude API porque el preview editable compensa errores de parseo); `pdfjs-dist` como extractor (única alternativa 100% browser + gratis + sin backend); modal full-screen con wizard de 3 pasos (no router — FinAngel es SPA); MVP arranca por **Galicia** (banco principal), Naranja X y MP en fase 2 replicando el patrón; **requiere correr SQL de setup en Supabase** (tabla `merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar. Aprendizaje incremental de categorías por comercio persistido en `merchant_mappings`.
+- **Botón "Todo" en otros modales (`AddTransactionModal`, `QuickPayDebtModal`)** — idea del 2026-10-30, para después y separada de la de `TransferModal`; reutilizar el mismo patrón una vez implementado ahí. `QuickPayDebtModal` ya pre-rellena con el saldo pendiente, evaluar si hace falta.
 
 ## Pending work
 
@@ -207,6 +213,9 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 - **`BudgetAlert` reutilizable** con prop opcional `amountLabel` (default `"Presupuestado"`): `TotalCard` compara presupuesto **restante** (límite − gastado por categoría) vs patrimonio/ingresos — desaparece cuando todo el presupuesto del mes ya fue gastado; mismo cálculo en `SettingsPanel`; `TotalCard` usa `amountLabel="Por gastar"`.
 - **`BudgetChips`** movido de `TotalCard` a `GreetingCard`: chips (verde ✓ / rojo ⚠ si >10% excedido) bajo título "PRESUPUESTO PAGADO", separados de fecha/layout; solo aparecen cuando el gasto del mes alcanza el presupuesto de la categoría.
 - `upsertTx` en `useFinanceData` muestra toast `"✓ Presupuesto de [Categoría] completado"` al cruzar el umbral (en vez del toast genérico).
+
+### Transferencias
+- **Botón "Todo" en `TransferModal`** (2026-10-30): junto al monto, rellena con el saldo completo de la cuenta origen (trunca a 2 decimales, coma decimal) y limpia el error. Deshabilitado con saldo ≤ 0. Cambiar la cuenta origen borra el monto (hay que volver a tocar "Todo"). Funciona igual con privacidad activa. 4 tests en `04-transfers.spec.ts`.
 
 ### Filtros y búsqueda
 - Búsqueda de transacciones extendida a categoría (label): `catById(t.categoryId).label` incluido en `filteredTx` de `App.tsx`.
