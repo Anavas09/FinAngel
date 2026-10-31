@@ -46,17 +46,23 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
 
   const setError = () => { setAmountError(true); amountRef.current?.focus(); };
 
+  // Saldo resultante tras guardar (revierte el monto original con su signo si la cuenta no cambia).
+  // Solo bloquea si queda negativo y el movimiento empeora el saldo actual.
+  const wouldOverdraw = (num: number) => {
+    if (!selectedAccount) return false;
+    const signedNew = kind === 'income' ? Math.abs(num) : -Math.abs(num);
+    const signedOld = editing && editing.accountId === accountId ? editing.amount : 0;
+    const resulting = selectedAccount.balance - signedOld + signedNew;
+    return resulting < 0 && resulting < selectedAccount.balance;
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(amount.replace(',', '.'));
     if (!num || isNaN(num) || num <= 0) { setError(); return; }
     setAmountError(false);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-    if (kind === 'expense' && selectedAccount) {
-      const isSameAccount = editing?.accountId === accountId;
-      const existingAmt = isSameAccount ? Math.abs(editing?.amount ?? 0) : 0;
-      if ((num - existingAmt) > selectedAccount.balance) { setError(); return; }
-    }
+    if (wouldOverdraw(num)) { setError(); return; }
     const signed = kind === 'income' ? Math.abs(num) : -Math.abs(num);
     const cleanNote = (note.trim() || (kind === 'income' ? 'Ingreso' : 'Gasto')).slice(0, 200);
     const validDebtId = editing?.debtId
@@ -71,12 +77,47 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
         amount: signed,
         note: cleanNote,
         ...(validDebtId ? { debtId: validDebtId } : {}),
+        ...(editing?.creditCardId ? { creditCardId: editing.creditCardId } : {}),
+        ...(editing?.transferGroup ? { transferGroup: editing.transferGroup } : {}),
+        ...(editing?.createdAt ? { createdAt: editing.createdAt } : {}),
       },
       validDebtId,
     );
   };
 
   const expenseCats = CATEGORIES.filter(c => c.id !== 'ingreso' && c.id !== 'transfer');
+
+  if (editing?.categoryId === 'transfer') {
+    return (
+      <div className="fa-modal-wrap" onClick={onClose}>
+        <div className="fa-modal" onClick={e => e.stopPropagation()}>
+          <div className="fa-modal-handle" />
+          <header className="fa-modal-head">
+            <h3>Transferencia</h3>
+            <button className="fa-iconbtn fa-iconbtn-ghost" onClick={onClose} aria-label="Cerrar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M6 6 L18 18 M18 6 L6 18" />
+              </svg>
+            </button>
+          </header>
+          <div className="fa-form">
+            <p style={{ fontSize: 13, opacity: 0.8, margin: 0 }}>
+              {editing.note} · {fmtMoney(editing.amount, selectedAccount?.currency ?? 'ARS', privacy)}
+            </p>
+            <p style={{ fontSize: 12, opacity: 0.6, margin: '8px 0 0' }}>
+              Las transferencias no se pueden editar. Para corregirla, eliminá los dos movimientos y volvé a hacerla.
+            </p>
+            <div className="fa-modal-actions">
+              {onDelete && (
+                <button type="button" className="fa-btn fa-btn-danger" onClick={onDelete}>Eliminar</button>
+              )}
+              <button type="button" className="fa-btn fa-btn-ghost" onClick={onClose}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fa-modal-wrap" onClick={onClose}>
@@ -118,12 +159,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
             </div>
             {amountError && (
               <span style={{ fontSize: 11, color: '#C44A3D', marginTop: 4, display: 'block' }}>
-                {kind === 'expense' && selectedAccount && (() => {
-                  const n = parseFloat(amount.replace(',', '.'));
-                  const isSame = editing?.accountId === accountId;
-                  const existing = isSame ? Math.abs(editing?.amount ?? 0) : 0;
-                  return (n - existing) > selectedAccount.balance;
-                })()
+                {selectedAccount && wouldOverdraw(parseFloat(amount.replace(',', '.')))
                   ? `Saldo insuficiente${!privacy ? ` (disponible: ${fmtMoney(selectedAccount.balance, selectedAccount.currency, false)})` : ''}`
                   : 'Ingresá un monto válido mayor a cero'}
               </span>
