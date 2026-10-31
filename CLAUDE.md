@@ -129,7 +129,7 @@ e2e/
     03-transactions.spec.ts     — 15 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar), editar un ingreso a gasto valida el saldo descontando el ingreso original, fecha por defecto en hora local (zona Buenos Aires + reloj fijado)
     04-transfers.spec.ts        — 12 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default, botón Todo (rellena, transfiere sin error, cambiar origen borra monto, deshabilitado con saldo 0), las transferencias no se editan (solo eliminar)
     05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
-    06-settings.spec.ts         — 10 tests: abrir/cerrar, privacidad, layout, color, FX, presupuestos, borrar todo
+    06-settings.spec.ts         — 11 tests: abrir/cerrar, privacidad, layout, color, FX, presupuestos, borrar todo (incluye error de Supabase: avisa y no vacía la pantalla)
     07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
     08-search-filter.spec.ts    — 7 tests: buscar texto/vacío/limpiar, filtro período, "Todos", combinado, buscar por cuenta
     09-charts.spec.ts           — 8 tests: 2 cards, títulos, leyenda % y valores, Ingresos/Egresos, hover, SVG paths, privacidad
@@ -141,7 +141,7 @@ e2e/
     15-credit-cards.spec.ts        — 23 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, deshacer eliminar pago no descuenta dos veces, editar un pago ajusta el saldo y conserva el vínculo (verifica tras recargar), calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
 ```
 
-**151 tests en total.** Fallos conocidos:
+**152 tests en total.** Fallos conocidos:
 - El test "editar nombre actualiza el saludo" de `06-settings` se eliminó el 2026-10-30: chocaba con el rate-limit de `supabase.auth.updateUser` y modificaba el usuario de prueba real. La función sigue existiendo en la app.
 - `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase.
 - `15-credit-cards` "alerta de interés visible en la tarjeta cuando TNA está seteada" y "calculadora de intereses visible en modal de pago con TNA" fallan siempre desde `caef132`: la alerta y la calculadora requieren `minPayment` y esos tests solo cargan la TNA (verificado 2026-10-21).
@@ -170,6 +170,7 @@ Plan original en `ledger-upgrade-plan.md` (contiene el SQL de los RPCs; conserva
 
 - **Fase 1 — Supabase SQL** ✅: RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente). Tipos del RPC `register_transaction`: `p_id uuid`, `p_user_id uuid`; `p_account_id text`, `p_debt_id text`, `p_credit_card_id text` (los IDs de cuentas/deudas/tarjetas son texto con prefijos como `'ars'`, `'acc_123'`, `'debt-123'`, `'cc-...'`). Columnas `transfer_group` y `created_at` en `transactions`.
 - **Fase 2 — TypeScript** ✅: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
+- **RPC `update_transaction`** ✅ (2026-10-30): editar un movimiento ajusta los saldos en el servidor (revierte el monto viejo en la cuenta original y aplica el nuevo en la destino, atómico, valida el dueño con `auth.uid()`). Firma: `p_id uuid, p_account_id text, p_category_id text, p_amount float, p_date date, p_note text, p_debt_id text, p_credit_card_id text`. `updateTransaction` (`src/lib/db/transactions.ts`) la llama; `upsertTx` ya no escribe saldos al editar. SQL ejecutado a mano en Supabase (no versionado: ver migrations). Pendiente portarlo a mobile (anotado en su CLAUDE.md).
 - **Fase 3** ❌ descartada: inmutabilidad estricta de amount/date tiene demasiada fricción para app personal.
 - **Cleanup 2026-08-25** ✅: eliminado del schema el trigger `enforce_tx_immutability` + función `prevent_tx_mutation` (residuo de Fase 3 que hacía fallar `updateTransaction` con "tx_immutable: amount and date cannot be changed"). También removidos por dead weight (nadie los consultaba desde el código): tabla `audit_log` + trigger `audit_transactions` + función `log_transaction_change`, vista `account_balances`, columna `reverses_tx_id` en `transactions`. Se mantienen los RPCs, `transfer_group` y `created_at`.
 - **Fase 4** ❌ descartada: `amount FLOAT → BIGINT` (centavos × 100) es scope grande y para app personal no aporta valor real. Los FLOAT alcanzan.

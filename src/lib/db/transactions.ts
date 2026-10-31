@@ -63,13 +63,18 @@ export const insertTransferRpc = async (
   if (error) throw error;
 };
 
+// El RPC revierte el monto viejo en la cuenta original y aplica el nuevo en la destino, todo en una transacción
 export const updateTransaction = async (tx: Transaction): Promise<void> => {
-  const { error } = await supabase.from('transactions').update({
-    account_id: tx.accountId, category_id: tx.categoryId,
-    date: tx.date, amount: tx.amount, note: tx.note,
-    debt_id: tx.debtId ?? null,
-    credit_card_id: tx.creditCardId ?? null,
-  }).eq('id', tx.id);
+  const { error } = await supabase.rpc('update_transaction', {
+    p_id:             tx.id,
+    p_account_id:     tx.accountId,
+    p_category_id:    tx.categoryId,
+    p_amount:         tx.amount,
+    p_date:           tx.date,
+    p_note:           tx.note,
+    p_debt_id:        tx.debtId ?? null,
+    p_credit_card_id: tx.creditCardId ?? null,
+  });
   if (error) throw error;
 };
 

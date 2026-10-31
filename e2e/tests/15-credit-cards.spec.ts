@@ -299,12 +299,12 @@ test('editar un pago de tarjeta ajusta el saldo y conserva el vínculo con la ta
   const editModal = app.page.locator('.fa-modal');
   await editModal.locator('.fa-amount-input input').fill('5000');
   // La UI se actualiza antes de que Supabase confirme: se espera a las dos escrituras para no cortarlas al recargar
-  const saved = (table: string) => app.page.waitForResponse(
-    r => r.url().includes(`/rest/v1/${table}`) && r.request().method() === 'PATCH' && r.ok(),
+  const saved = (path: string, method: string) => app.page.waitForResponse(
+    r => r.url().includes(path) && r.request().method() === method && r.ok(),
   );
   await Promise.all([
-    saved('transactions'),
-    saved('credit_cards'),
+    saved('/rest/v1/rpc/update_transaction', 'POST'),
+    saved('/rest/v1/credit_cards', 'PATCH'),
     editModal.getByRole('button', { name: 'Guardar' }).click(),
   ]);
   await expect(editModal).not.toBeVisible({ timeout: 5_000 });

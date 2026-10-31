@@ -140,10 +140,8 @@ export const useFinanceData = (
       });
       setTransactions(prev => prev.map(t => t.id === tx.id ? updated : t));
       setAccounts(newAccounts);
-      Promise.all([
-        updateTransaction(updated),
-        ...newAccounts.filter(a => touched(a.id)).map(a => updateAccountBalance(a.id, a.balance)),
-      ]).catch(() => {
+      // Los saldos los ajusta el RPC en el servidor; acá solo se actualiza la pantalla
+      updateTransaction(updated).catch(() => {
         setTransactions(transactions);
         setAccounts(accounts);
         showToast('Error al actualizar el movimiento');
