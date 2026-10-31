@@ -2,7 +2,7 @@ import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@
 import { CSS } from '@dnd-kit/utilities';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
-import { fmtMoney, fmtDate } from '../../data/utils';
+import { fmtMoney, fmtDate, todayLocal } from '../../data/utils';
 
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { Debt, DebtInput } from '../../types';
@@ -21,7 +21,7 @@ interface DebtListProps {
 
 const getDebtStatus = (debt: Debt): 'paid' | 'overdue' | 'active' => {
   if (debt.status === 'paid') return 'paid';
-  if (debt.dueDate && debt.dueDate < new Date().toISOString().slice(0, 10)) return 'overdue';
+  if (debt.dueDate && debt.dueDate < todayLocal()) return 'overdue';
   return 'active';
 };
 

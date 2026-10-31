@@ -1,6 +1,6 @@
 import { FinAngel, FinAngelMini } from '../mascot/Mascot';
 import { FX_TO_ARS } from '../../data/constants';
-import { catById, fmtDate, fmtMoney } from '../../data/utils';
+import { catById, fmtDate, fmtMoney, todayLocal } from '../../data/utils';
 
 import type { Account, Transaction } from '../../types';
 
@@ -59,7 +59,7 @@ export const ExportModal = ({ accounts, transactions, totalARS, kind, onClose, o
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `finangel-resumen-${new Date().toISOString().slice(0, 10)}${kindSuffix}.csv`;
+    a.download = `finangel-resumen-${todayLocal()}${kindSuffix}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -70,7 +70,7 @@ export const ExportModal = ({ accounts, transactions, totalARS, kind, onClose, o
   const downloadPDF = () => {
     const prev = document.title;
     const kindLabel = kind === 'income' ? ' Ingresos' : kind === 'expense' ? ' Egresos' : '';
-    document.title = `FinAngel — Resumen${kindLabel} ${new Date().toISOString().slice(0, 10)}`;
+    document.title = `FinAngel — Resumen${kindLabel} ${todayLocal()}`;
     window.print();
     document.title = prev;
     onToast('Listo para imprimir o guardar como PDF');

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchCreditCards, insertCreditCard, updateCreditCard, deleteCreditCardById } from '../lib/db';
-import { loadOrder, saveOrder, applyOrder } from '../data/utils';
+import { loadOrder, saveOrder, applyOrder, todayLocal } from '../data/utils';
 
 import type { Session } from '@supabase/supabase-js';
 import type { CreditCard, CreditCardInput, Currency } from '../types';
@@ -29,7 +29,7 @@ export const useCreditCardsData = (
     const newCard: CreditCard = {
       ...fields,
       id: 'cc-' + crypto.randomUUID(),
-      createdAt: new Date().toISOString().slice(0, 10),
+      createdAt: todayLocal(),
     } as CreditCard;
     setCards(prev => [newCard, ...prev]);
     insertCreditCard(newCard, session!.user.id).catch(() => {

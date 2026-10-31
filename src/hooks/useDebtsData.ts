@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchDebts, insertDebt, updateDebt, deleteDebtById } from '../lib/db';
-import { loadOrder, saveOrder, applyOrder } from '../data/utils';
+import { loadOrder, saveOrder, applyOrder, todayLocal } from '../data/utils';
 
 import type { Session } from '@supabase/supabase-js';
 import type { Currency, Debt, DebtInput } from '../types';
@@ -29,7 +29,7 @@ export const useDebtsData = (
     const newDebt: Debt = {
       ...fields,
       id: 'debt-' + Date.now(),
-      createdAt: new Date().toISOString().slice(0, 10),
+      createdAt: todayLocal(),
     } as Debt;
     setDebts(prev => [newDebt, ...prev]);
     insertDebt(newDebt, session!.user.id).catch(() => {

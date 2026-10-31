@@ -15,7 +15,7 @@ import { FinAngelMini } from './components/mascot/Mascot';
 import { SettingsPanel } from './components/settings/SettingsPanel';
 import { TransactionList } from './components/transactions/TransactionList';
 import { FaDots } from './components/ui/Dots';
-import { catById, fmtMoney } from './data/utils';
+import { catById, currentYm, fmtMoney } from './data/utils';
 import { useCreditCardsData } from './hooks/useCreditCardsData';
 import { useDebtsData } from './hooks/useDebtsData';
 import { useFinanceData } from './hooks/useFinanceData';
@@ -61,10 +61,7 @@ const App = () => {
   const [hoverCatIdx, setHoverCatIdx]       = useState<number | null>(null);
   const [hoverFlowIdx, setHoverFlowIdx]     = useState<number | null>(null);
   const [txSearch, setTxSearch]             = useState('');
-  const [txPeriod, setTxPeriod]             = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const [txPeriod, setTxPeriod]             = useState(currentYm);
   const [txKind, setTxKind]                 = useState<'' | 'income' | 'expense'>('');
   const [visibleTxCount, setVisibleTxCount] = useState(12);
 

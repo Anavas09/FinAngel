@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { fmtMoney } from '../../data/utils';
+import { fmtMoney, todayLocal } from '../../data/utils';
 
 import type { Account, Currency } from '../../types';
 
@@ -16,7 +16,7 @@ export const TransferModal = ({ accounts, fxRates, onClose, onSave, privacy }: T
   const [fromId, setFromId] = useState(accounts[0]?.id ?? '');
   const [toId, setToId]     = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
   const [amount, setAmount] = useState('');
-  const [date, setDate]     = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate]     = useState(todayLocal());
   const [note, setNote]     = useState('');
   const [amountError, setAmountError] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);

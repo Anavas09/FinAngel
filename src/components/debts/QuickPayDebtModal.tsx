@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { fmtMoney } from '../../data/utils';
+import { fmtMoney, todayLocal } from '../../data/utils';
 
 import type { Account, Debt, TransactionInput } from '../../types';
 
@@ -16,7 +16,7 @@ export const QuickPayDebtModal = ({ debt, accounts, onClose, onSave, privacy }: 
   const eligible = accounts.filter(a => a.visible && a.currency === debt.currency);
   const [accountId, setAccountId] = useState(eligible[0]?.id ?? '');
   const [amount, setAmount] = useState(String(debt.monthlyPayment ?? debt.remainingAmount));
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayLocal());
   const [amountError, setAmountError] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
   const acc = eligible.find(a => a.id === accountId);

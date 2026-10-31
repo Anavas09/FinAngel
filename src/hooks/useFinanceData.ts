@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { catById } from '../data/constants';
-import { loadOrder, saveOrder, applyOrder } from '../data/utils';
+import { loadOrder, saveOrder, applyOrder, currentYm } from '../data/utils';
 import {
   fetchAccounts, fetchTransactions, fetchBudgets, seedUserData, clearUserData,
   insertAccount, insertTransaction, insertTransferRpc, updateTransaction, deleteTransactionById,
@@ -159,7 +159,7 @@ export const useFinanceData = (
       if (newTx.amount < 0 && newTx.categoryId !== 'transfer') {
         const budget = budgets.find(b => b.categoryId === newTx.categoryId);
         if (budget) {
-          const ym  = new Date().toISOString().slice(0, 7);
+          const ym  = currentYm();
           const acc = accounts.find(a => a.id === newTx.accountId);
           const rate = acc ? (fxRates[acc.currency] ?? 1) : 1;
           const spentBefore = transactions

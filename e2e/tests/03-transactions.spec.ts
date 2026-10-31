@@ -230,3 +230,15 @@ test('editar un ingreso a gasto valida el saldo descontando el ingreso original'
   await expect(modal).not.toBeVisible();
   await expect(tx.locator('.fa-tx-amount[data-positive="false"]')).toBeVisible();
 });
+
+test.describe('fecha de hoy en hora local', () => {
+  test.use({ timezoneId: 'America/Argentina/Buenos_Aires' });
+
+  test('la fecha por defecto es la local aunque en UTC ya sea el día siguiente', async ({ withSeed: app }) => {
+    // 31/10 22:00 en Buenos Aires = 01/11 01:00 UTC: con toISOString saldría 2026-11-01
+    await app.page.clock.setFixedTime(new Date('2026-11-01T01:00:00Z'));
+
+    await app.openAddTransaction();
+    await expect(app.page.locator('.fa-modal input[type="date"]')).toHaveValue('2026-10-31');
+  });
+});

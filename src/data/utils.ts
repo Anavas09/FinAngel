@@ -19,6 +19,14 @@ export const fmtMoney = (n: number, ccy: Currency | string = 'ARS', hide = false
   return `${sign}${abs}`;
 };
 
+// Fecha y mes de hoy en hora local (toISOString devuelve UTC: desde las 21:00 en UTC-3 ya es "mañana")
+export const todayLocal = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+export const currentYm = (): string => todayLocal().slice(0, 7);
+
 export const fmtDate = (iso: string): string => {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' });

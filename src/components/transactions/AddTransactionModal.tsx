@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 
 import { CATEGORIES } from '../../data/constants';
-import { fmtMoney } from '../../data/utils';
+import { fmtMoney, todayLocal } from '../../data/utils';
 
 import type { Account, Debt, TransactionInput } from '../../types';
 
@@ -34,7 +34,7 @@ export const AddTransactionModal = ({ accounts, editing, onClose, onSave, onDele
   const [accountId, setAccountId] = useState(editing?.accountId ?? defaultAccountId);
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? (prefilledDebt ? 'envio_pago' : 'comida'));
   const [note, setNote] = useState(editing?.note ?? (prefilledDebt ? `Pago de ${prefilledDebt.name}` : ''));
-  const [date, setDate] = useState(editing?.date ?? new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(editing?.date ?? todayLocal());
   const [amountError, setAmountError] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
   const [debtId, setDebtId] = useState(editing?.debtId ?? preselectedDebtId ?? '');
