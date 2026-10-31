@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/index';
+import { fillDebtForm, submitDebtForm } from '../helpers/modals';
 import type { Page } from '@playwright/test';
 
 // El panel usa Row = div con span label + control. No tiene clase propia.
@@ -164,4 +165,24 @@ test('borrar todo elimina todos los datos', async ({ withSeed: app }) => {
   await panel.getByRole('button', { name: 'Sí, borrar' }).click();
 
   await expect(app.accountsSection().locator('.fa-empty')).toBeVisible({ timeout: 8_000 });
+});
+
+test('si falla el borrado se avisa y no se vacía nada en pantalla', async ({ withSeed: app }) => {
+  await app.openAddDebt();
+  await fillDebtForm(app.page, { name: 'Deuda borrado fallido', totalAmount: '10000' });
+  await submitDebtForm(app.page);
+  await expect(app.getDebts().filter({ hasText: 'Deuda borrado fallido' })).toBeVisible();
+  const accountsBefore = await app.getAccounts().count();
+
+  // Supabase rechaza el borrado de cuentas
+  await app.page.route('**/rest/v1/accounts*', route =>
+    route.request().method() === 'DELETE' ? route.fulfill({ status: 500, body: '{}' }) : route.continue());
+
+  const panel = await openPanel(app.page);
+  await panel.getByRole('button', { name: 'Borrar todos los datos' }).click();
+  await panel.getByRole('button', { name: 'Sí, borrar' }).click();
+
+  await expect(app.getToast()).toContainText('Error al borrar los datos', { timeout: 8_000 });
+  await expect(app.getAccounts()).toHaveCount(accountsBefore);
+  await expect(app.getDebts().filter({ hasText: 'Deuda borrado fallido' })).toBeVisible();
 });

@@ -221,22 +221,36 @@ export const useFinanceData = (
 
   // --- Gestión de datos ---
 
-  const handleLoadSeed = async () => {
-    if (!session) return;
-    await clearUserData();
-    await seedUserData(session.user.id);
-    const [accs, txs] = await Promise.all([fetchAccounts(), fetchTransactions()]);
-    setAccounts(accs);
-    setTransactions(txs);
-    showToast('Datos de ejemplo cargados');
+  // Devuelven true si terminaron bien: el llamador solo limpia deudas/tarjetas de la pantalla en ese caso.
+  // Si fallan a la mitad la base puede quedar parcial, por eso el aviso pide recargar.
+  const handleLoadSeed = async (): Promise<boolean> => {
+    if (!session) return false;
+    try {
+      await clearUserData();
+      await seedUserData(session.user.id);
+      const [accs, txs] = await Promise.all([fetchAccounts(), fetchTransactions()]);
+      setAccounts(applyOrder(accs, loadOrder(ACCOUNT_ORDER_KEY)));
+      setTransactions(txs);
+      showToast('Datos de ejemplo cargados');
+      return true;
+    } catch {
+      showToast('Error al cargar los datos de ejemplo. Recargá para ver el estado real');
+      return false;
+    }
   };
 
-  const handleClearAll = async () => {
-    if (!session) return;
-    await clearUserData();
-    setAccounts([]);
-    setTransactions([]);
-    showToast('Todos los datos fueron borrados');
+  const handleClearAll = async (): Promise<boolean> => {
+    if (!session) return false;
+    try {
+      await clearUserData();
+      setAccounts([]);
+      setTransactions([]);
+      showToast('Todos los datos fueron borrados');
+      return true;
+    } catch {
+      showToast('Error al borrar los datos. Recargá para ver el estado real');
+      return false;
+    }
   };
 
   // --- Valores derivados ---

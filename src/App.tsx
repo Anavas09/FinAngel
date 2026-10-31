@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-
 import { DndContext, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -83,6 +82,11 @@ const App = () => {
   const finance      = useFinanceData(session ?? null, showToast, fxRates, txPeriod);
   const debts        = useDebtsData(session ?? null, showToast, fxRates);
   const creditCards  = useCreditCardsData(session ?? null, showToast, fxRates);
+
+  // clearUserData también borra deudas y tarjetas en la base: se vacían en pantalla solo si salió bien
+  const loadSeed = async () => {
+    if (await finance.handleLoadSeed()) { debts.clearDebts(); creditCards.clearCards(); }
+  };
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -173,7 +177,7 @@ const App = () => {
             <div className="fa-empty">
               <p>No hay cuentas todavía.</p>
               {import.meta.env.DEV && (
-                <button className="fa-btn fa-btn-primary" onClick={finance.handleLoadSeed}>
+                <button className="fa-btn fa-btn-primary" onClick={loadSeed}>
                   Cargar datos de ejemplo
                 </button>
               )}
@@ -482,8 +486,8 @@ const App = () => {
       <SettingsPanel
         tweaks={tweaks}
         setTweak={setTweak}
-        onLoadSeed={finance.handleLoadSeed}
-        onClearAll={async () => { await finance.handleClearAll(); debts.clearDebts(); creditCards.clearCards(); }}
+        onLoadSeed={loadSeed}
+        onClearAll={async () => { if (await finance.handleClearAll()) { debts.clearDebts(); creditCards.clearCards(); } }}
         onSignOut={async () => { setSigningOut(true); await supabase.auth.signOut(); }}
         userEmail={session.user.email ?? ''}
         userName={userName}
