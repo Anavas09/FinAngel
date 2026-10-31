@@ -4,7 +4,7 @@ const searchInput = (page: import('@playwright/test').Page) =>
   page.getByPlaceholder('Buscar nota o cuenta…');
 
 const periodSelect = (page: import('@playwright/test').Page) =>
-  page.locator('select.fa-input');
+  page.locator('select.fa-input').first(); // el segundo select es el filtro de tipo
 
 test('búsqueda por texto filtra las transacciones', async ({ withSeed: app }) => {
   const items = app.getTransactionItems();

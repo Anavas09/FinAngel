@@ -45,7 +45,18 @@ where recurring is not null
 order by date desc;
 ```
 
-Los duplicados que el bug ya haya generado se buscan con la consulta del bug 1 en `data-bugs-plan.md`. Hay que borrarlos **desde la app**, no con SQL, para que se corrijan los saldos.
+Los duplicados que el bug ya haya generado pueden seguir en Supabase (las copias se guardaban con `recurring = null`). Se buscan en el SQL Editor con:
+
+```sql
+select account_id, date, note, amount, count(*) as copias
+from transactions
+where recurring is null
+group by account_id, date, note, amount
+having count(*) > 1
+order by date desc;
+```
+
+Revisa cada fila (dos gastos idénticos el mismo día pueden ser legítimos) y borra los duplicados reales **desde la app**, no con SQL: al eliminar un movimiento la app corrige el saldo de la cuenta; un `delete` directo no. Pendiente de revisar en la base real (el plan `data-bugs-plan.md` se eliminó el 2026-10-30 por estar terminado; sigue en el historial de git).
 
 ## Problemas conocidos (verificados el 2026-10-21)
 

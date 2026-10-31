@@ -67,7 +67,7 @@ Financial data (accounts, transactions, budgets) lives in **Supabase**, fetched 
 |------|---------|
 | `src/types.ts` | All TypeScript types (single source of truth) |
 | `src/data/constants.ts` | Seed data, FX rates, category map, mascot copy, default tweaks |
-| `src/data/utils.ts` | `fmtMoney`, `fmtDate`, `loadState`, `saveState` |
+| `src/data/utils.ts` | `fmtMoney`, `fmtDate`, `todayLocal`/`currentYm` (fecha y mes locales; no usar `toISOString` para "hoy"), `loadState`, `saveState` |
 | `src/lib/supabase.ts` | Supabase client initialization |
 | `src/lib/db/accounts.ts` | Account CRUD (fetch, insert, update balance/visibility, delete) |
 | `src/lib/db/transactions.ts` | Transaction CRUD (fetch, insert, update, delete) |
@@ -126,7 +126,7 @@ e2e/
   tests/
     01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
-    03-transactions.spec.ts     — 14 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar), editar un ingreso a gasto valida el saldo descontando el ingreso original
+    03-transactions.spec.ts     — 15 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar), editar un ingreso a gasto valida el saldo descontando el ingreso original, fecha por defecto en hora local (zona Buenos Aires + reloj fijado)
     04-transfers.spec.ts        — 12 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default, botón Todo (rellena, transfiere sin error, cambiar origen borra monto, deshabilitado con saldo 0), las transferencias no se editan (solo eliminar)
     05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
     06-settings.spec.ts         — 10 tests: abrir/cerrar, privacidad, layout, color, FX, presupuestos, borrar todo
@@ -141,7 +141,7 @@ e2e/
     15-credit-cards.spec.ts        — 23 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, deshacer eliminar pago no descuenta dos veces, editar un pago ajusta el saldo y conserva el vínculo (verifica tras recargar), calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
 ```
 
-**150 tests en total.** Fallos conocidos:
+**151 tests en total.** Fallos conocidos:
 - El test "editar nombre actualiza el saludo" de `06-settings` se eliminó el 2026-10-30: chocaba con el rate-limit de `supabase.auth.updateUser` y modificaba el usuario de prueba real. La función sigue existiendo en la app.
 - `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase.
 - `15-credit-cards` "alerta de interés visible en la tarjeta cuando TNA está seteada" y "calculadora de intereses visible en modal de pago con TNA" fallan siempre desde `caef132`: la alerta y la calculadora requieren `minPayment` y esos tests solo cargan la TNA (verificado 2026-10-21).
@@ -166,7 +166,7 @@ React Native + Expo app with shared business logic. Repo: `C:\Users\angel\OneDri
 
 ## Ledger upgrade ✅ (en main desde 2026-07-01, cleanup 2026-08-25)
 
-Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-plan.md`.
+Plan original en `ledger-upgrade-plan.md` (contiene el SQL de los RPCs; conservar hasta versionar las migrations). El plan de cleanup (`ledger-cleanup-plan.md`) se eliminó el 2026-10-30 por estar terminado; sigue en el historial de git.
 
 - **Fase 1 — Supabase SQL** ✅: RPCs `register_transaction` y `register_transfer` (con `p_id`/`p_id1`/`p_id2` para UUIDs del cliente). Tipos del RPC `register_transaction`: `p_id uuid`, `p_user_id uuid`; `p_account_id text`, `p_debt_id text`, `p_credit_card_id text` (los IDs de cuentas/deudas/tarjetas son texto con prefijos como `'ars'`, `'acc_123'`, `'debt-123'`, `'cc-...'`). Columnas `transfer_group` y `created_at` en `transactions`.
 - **Fase 2 — TypeScript** ✅: `insertTransaction` → RPC; `insertTransferRpc` añadido; llamadas a `updateAccountBalance` eliminadas de insert/transfer/recurring/undo en `useFinanceData.ts`; `transferGroup?`/`createdAt?` en `Transaction`; IDs migrados a `crypto.randomUUID()`.
@@ -183,7 +183,6 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 
 - **Módulo subida resumen tarjeta** — plan en `credit-card-summary-upload-plan.md`; requiere correr SQL de setup (`merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar.
 - **Migrations Supabase versionadas** — mover schema a `supabase/migrations/*.sql` con Supabase CLI (README lo lista como TODO).
-- **Hallazgos menores de datos** — en `data-bugs-plan.md` (los 3 bugs principales ya están resueltos): fecha "de hoy" en UTC (el de editar un pago de tarjeta que perdía `credit_card_id` se arregló el 2026-10-30).
 - **Tests E2E desactualizados** — 2 de `15-credit-cards` (hay que cargar `minPayment`). Detalle en la sección Testing.
 
 ## Descartado (con razón documentada)
