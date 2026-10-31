@@ -209,3 +209,24 @@ test('editar un gasto cambiándole la cuenta mueve el monto entre las dos cuenta
   await expect.poll(() => saldo('Cuenta ARS')).toBe(origenAntes + 1000);
   await expect.poll(() => saldo('Mercado Pago')).toBe(destinoAntes - 1500);
 });
+
+test('editar un ingreso a gasto valida el saldo descontando el ingreso original', async ({ withSeed: app }) => {
+  // Cuenta USD: saldo 1820 que incluye el ingreso "Compra mensual USD" de +250.
+  // Sin ese ingreso quedan 1570, así que un gasto de 1900 deja la cuenta en negativo.
+  const tx = app.getTransactionItems().filter({ hasText: 'Compra mensual USD' });
+  await tx.click();
+
+  const modal = app.page.locator('.fa-modal');
+  await modal.getByRole('button', { name: /Gasto/ }).click();
+  await modal.locator('.fa-amount-input input').fill('1900');
+  await submitTransactionForm(app.page, true);
+
+  await expect(modal.locator('.fa-field-amount').getByText(/Saldo insuficiente/i)).toBeVisible();
+  await expect(modal).toBeVisible();
+
+  // Dentro del saldo real (1570) sí se puede guardar
+  await modal.locator('.fa-amount-input input').fill('1500');
+  await submitTransactionForm(app.page, true);
+  await expect(modal).not.toBeVisible();
+  await expect(tx.locator('.fa-tx-amount[data-positive="false"]')).toBeVisible();
+});

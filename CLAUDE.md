@@ -126,10 +126,10 @@ e2e/
   tests/
     01-auth.spec.ts             — 5 tests: pantalla login, error contraseña, toggle modo, login, logout
     02-accounts.spec.ts         — 8 tests: estado vacío, crear ARS/USD, max chars, toggle visibilidad, delete
-    03-transactions.spec.ts     — 13 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar)
-    04-transfers.spec.ts        — 11 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default, botón Todo (rellena, transfiere sin error, cambiar origen borra monto, deshabilitado con saldo 0)
+    03-transactions.spec.ts     — 14 tests: gasto, ingreso, validaciones, saldo insuficiente (error en input de monto), editar, eliminar+undo, balance, editar cambiando cuenta/monto ajusta ambos saldos (verifica tras recargar), editar un ingreso a gasto valida el saldo descontando el ingreso original
+    04-transfers.spec.ts        — 12 tests: crea 2 txs, balances, destino excluye origen, auto-switch, error monto, saldo insuficiente (error en input de monto), nota default, botón Todo (rellena, transfiere sin error, cambiar origen borra monto, deshabilitado con saldo 0), las transferencias no se editan (solo eliminar)
     05-export.spec.ts           — 9 tests: abrir desde TopBar/sección, stats, tabla, CSV descarga/cabeceras/inyección, PDF (imprime + 1 sola página)
-    06-settings.spec.ts         — 11 tests: abrir/cerrar, nombre→saludo, privacidad, layout, color, FX, presupuestos, borrar todo
+    06-settings.spec.ts         — 10 tests: abrir/cerrar, privacidad, layout, color, FX, presupuestos, borrar todo
     07-ui-tweaks.spec.ts        — 7 tests: dropdown tema, warm/night CSS, persiste al recargar, checkmark activo, toast auto/undo
     08-search-filter.spec.ts    — 7 tests: buscar texto/vacío/limpiar, filtro período, "Todos", combinado, buscar por cuenta
     09-charts.spec.ts           — 8 tests: 2 cards, títulos, leyenda % y valores, Ingresos/Egresos, hover, SVG paths, privacidad
@@ -138,14 +138,14 @@ e2e/
     12-fx-dolarapi.spec.ts      — 7 tests: fetch exactamente 1 vez, inputs reflejan valor de API, total ARS sin abrir panel, error HTTP/red/sin campo venta → default, sobreescritura manual
     13-quickpay-categories.spec.ts — 15 tests: QuickPayDebtModal (encabezado, fallback sin cuentas, pre-relleno con cuota mensual, pre-relleno con saldo pendiente, saldo insuficiente en input de monto, validación, registro, pago completo, balance), categorías (Luz/Agua/Gas, Monotributo, select+guardar), eliminar restaura balance, eliminar pago restaura remainingAmount de la deuda, deshacer eliminar pago no descuenta dos veces
     14-ux-dots-fab.spec.ts         — 3 tests: FAB con SVG (no texto "+"), botón login muestra puntitos + "Entrando…" durante la carga, overlay de cierre de sesión con puntitos
-    15-credit-cards.spec.ts        — 22 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, deshacer eliminar pago no descuenta dos veces, calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
+    15-credit-cards.spec.ts        — 23 tests: estado vacío, crear mínima/completa, max chars, saldo default 0, disponible/utilización, límite excedido, alerta de interés, editar pre-rellena + guardar actualiza, cerrar/reabrir, eliminar+undo, pago fallback sin cuentas, pago pre-rellena monto, pago toast confirmación, deshacer eliminar pago no descuenta dos veces, editar un pago ajusta el saldo y conserva el vínculo (verifica tras recargar), calculadora de intereses en modal, total ARS, abrir desde estado vacío, borrar todo elimina las tarjetas en la DB (verifica tras recargar)
 ```
 
-**148 tests en total.** Fallos conocidos:
-- `06-settings "editar nombre actualiza el saludo"` falla intermitentemente por rate-limit de `supabase.auth.updateUser` después de ~40 tests.
+**150 tests en total.** Fallos conocidos:
+- El test "editar nombre actualiza el saludo" de `06-settings` se eliminó el 2026-10-30: chocaba con el rate-limit de `supabase.auth.updateUser` y modificaba el usuario de prueba real. La función sigue existiendo en la app.
 - `04-transfers "cambiar origen auto-actualiza el destino"` falla intermitentemente por orden no determinista de cuentas al retornar de Supabase.
 - `15-credit-cards` "alerta de interés visible en la tarjeta cuando TNA está seteada" y "calculadora de intereses visible en modal de pago con TNA" fallan siempre desde `caef132`: la alerta y la calculadora requieren `minPayment` y esos tests solo cargan la TNA (verificado 2026-10-21).
-- Tests de `09-charts`, los 2 de presupuesto en `06-settings` y los 4 de `03-transactions` que abren un movimiento del seed (editar ×2, eliminar, deshacer) fallan cuando el seed data es de un mes anterior al actual (el filtro de período por defecto deja la lista vacía). `TRANSACTIONS_SEED` tiene fechas fijas de mayo 2026, así que desde junio fallan siempre (verificado 2026-10-21); pasan con seed data del mes corriente.
+- El seed (`TRANSACTIONS_SEED`) genera las fechas en el mes actual (día limitado a hoy), así que ya no hay fallos por seed de un mes anterior (arreglado 2026-10-30). Los presupuestos de otras categorías se conservan entre tests: no asumir que no hay otras barras de presupuesto.
 
 ### Notas de arquitectura de búsqueda/filtros
 
@@ -183,8 +183,8 @@ Plan original en `ledger-upgrade-plan.md`. Plan de cleanup en `ledger-cleanup-pl
 
 - **Módulo subida resumen tarjeta** — plan en `credit-card-summary-upload-plan.md`; requiere correr SQL de setup (`merchant_mappings` + RPC `register_transactions_bulk`) antes de implementar.
 - **Migrations Supabase versionadas** — mover schema a `supabase/migrations/*.sql` con Supabase CLI (README lo lista como TODO).
-- **Hallazgos menores de datos** — en `data-bugs-plan.md` (los 3 bugs principales ya están resueltos): fecha "de hoy" en UTC; editar un pago de tarjeta pierde `credit_card_id`.
-- **Tests E2E desactualizados** — 2 de `15-credit-cards` (hay que cargar `minPayment`) y los que dependen del seed con fechas fijas de mayo 2026 (generar el seed con fechas del mes actual). Detalle en la sección Testing.
+- **Hallazgos menores de datos** — en `data-bugs-plan.md` (los 3 bugs principales ya están resueltos): fecha "de hoy" en UTC (el de editar un pago de tarjeta que perdía `credit_card_id` se arregló el 2026-10-30).
+- **Tests E2E desactualizados** — 2 de `15-credit-cards` (hay que cargar `minPayment`). Detalle en la sección Testing.
 
 ## Descartado (con razón documentada)
 

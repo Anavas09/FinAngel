@@ -39,17 +39,24 @@ export const ACCOUNT_BALANCES: Record<string, number> = {
   crypto: 1240,
 };
 
+// Fechas del seed en el mes actual (hora local, como txPeriod); el día se limita a hoy para no generar fechas futuras
+const seedDate = (day: number): string => {
+  const now = new Date();
+  const d = Math.min(day, now.getDate());
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+};
+
 export const TRANSACTIONS_SEED: Transaction[] = [
-  { id: 't1',  date: '2026-05-20', accountId: 'mp',     categoryId: 'comida',          amount: -8450,   note: 'Súper de la semana' },
-  { id: 't2',  date: '2026-05-19', accountId: 'ars',    categoryId: 'vivienda',        amount: -210000, note: 'Alquiler mayo' },
-  { id: 't3',  date: '2026-05-18', accountId: 'ars',    categoryId: 'ingreso',         amount: 850000,  note: 'Sueldo' },
-  { id: 't4',  date: '2026-05-17', accountId: 'mp',     categoryId: 'suscripciones',   amount: -4200,   note: 'Netflix + Spotify' },
-  { id: 't5',  date: '2026-05-16', accountId: 'tc',     categoryId: 'comida',          amount: -12300,  note: 'Cena con amigos' },
-  { id: 't6',  date: '2026-05-15', accountId: 'ars',    categoryId: 'luz_gas',         amount: -38500,  note: 'Luz' },
-  { id: 't7',  date: '2026-05-14', accountId: 'usd',    categoryId: 'ahorro',          amount: 250,     note: 'Compra mensual USD' },
-  { id: 't8',  date: '2026-05-12', accountId: 'mp',     categoryId: 'salud',           amount: -6800,   note: 'Farmacia' },
-  { id: 't9',  date: '2026-05-10', accountId: 'crypto', categoryId: 'ahorro',          amount: 120,     note: 'DCA USDT' },
-  { id: 't10', date: '2026-05-08', accountId: 'mp',     categoryId: 'comida',          amount: -3200,   note: 'Café ☕' },
+  { id: 't1',  date: seedDate(20), accountId: 'mp',     categoryId: 'comida',          amount: -8450,   note: 'Súper de la semana' },
+  { id: 't2',  date: seedDate(19), accountId: 'ars',    categoryId: 'vivienda',        amount: -210000, note: 'Alquiler' },
+  { id: 't3',  date: seedDate(18), accountId: 'ars',    categoryId: 'ingreso',         amount: 850000,  note: 'Sueldo' },
+  { id: 't4',  date: seedDate(17), accountId: 'mp',     categoryId: 'suscripciones',   amount: -4200,   note: 'Netflix + Spotify' },
+  { id: 't5',  date: seedDate(16), accountId: 'tc',     categoryId: 'comida',          amount: -12300,  note: 'Cena con amigos' },
+  { id: 't6',  date: seedDate(15), accountId: 'ars',    categoryId: 'luz_gas',         amount: -38500,  note: 'Luz' },
+  { id: 't7',  date: seedDate(14), accountId: 'usd',    categoryId: 'ahorro',          amount: 250,     note: 'Compra mensual USD' },
+  { id: 't8',  date: seedDate(12), accountId: 'mp',     categoryId: 'salud',           amount: -6800,   note: 'Farmacia' },
+  { id: 't9',  date: seedDate(10), accountId: 'crypto', categoryId: 'ahorro',          amount: 120,     note: 'DCA USDT' },
+  { id: 't10', date: seedDate(8),  accountId: 'mp',     categoryId: 'comida',          amount: -3200,   note: 'Café ☕' },
 ];
 
 export const MASCOT_COPY: Record<MascotPersonality, Record<MascotMood, string[]>> = {

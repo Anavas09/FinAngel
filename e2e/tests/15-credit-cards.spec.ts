@@ -274,6 +274,43 @@ test('deshacer la eliminación de un pago de tarjeta vuelve a descontar el pago 
   await expect(card).toContainText('20% utilizado', { timeout: 5_000 });
 });
 
+test('editar un pago de tarjeta ajusta el saldo y conserva el vínculo con la tarjeta', async ({ withSeed: app }) => {
+  await app.openAddCreditCard();
+  await fillCreditCardForm(app.page, {
+    name: 'Visa editar pago',
+    creditLimit: '100000',
+    currentBalance: '30000',
+  });
+  await submitCreditCardForm(app.page);
+
+  const card = app.getCreditCards().filter({ hasText: 'Visa editar pago' });
+  await card.getByTitle('Registrar pago').click();
+  const payModal = app.page.locator('.fa-modal');
+  const payInput = payModal.locator('.fa-amount-input input');
+  await payInput.clear();
+  await payInput.fill('10000');
+  await payModal.getByRole('button', { name: 'Registrar pago' }).click();
+  await expect(payModal).not.toBeVisible({ timeout: 5_000 });
+  await expect(card).toContainText('20% utilizado');
+
+  // Editar el pago a 5000: el saldo de la tarjeta sube 5000
+  const payment = () => app.getTransactionItems().filter({ hasText: 'Pago tarjeta Visa editar pago' }).first();
+  await payment().click();
+  const editModal = app.page.locator('.fa-modal');
+  await editModal.locator('.fa-amount-input input').fill('5000');
+  await editModal.getByRole('button', { name: 'Guardar' }).click();
+  await expect(editModal).not.toBeVisible({ timeout: 5_000 });
+  await expect(card).toContainText('25% utilizado', { timeout: 5_000 });
+
+  // Tras recargar, el pago sigue vinculado a la tarjeta: eliminarlo restaura el saldo
+  await app.page.reload();
+  await expect(app.getAccounts().first()).toBeVisible({ timeout: 10_000 });
+  await expect(card).toContainText('25% utilizado');
+  await payment().click();
+  await app.page.locator('.fa-modal').getByRole('button', { name: 'Eliminar' }).click();
+  await expect(card).toContainText('30% utilizado', { timeout: 5_000 });
+});
+
 test('calculadora de intereses visible en modal de pago con TNA', async ({ withSeed: app }) => {
   await app.openAddCreditCard();
   await fillCreditCardForm(app.page, {

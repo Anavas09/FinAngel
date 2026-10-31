@@ -175,3 +175,32 @@ test('botón Todo está deshabilitado si la cuenta origen tiene saldo cero', asy
 
   await expect(modal.getByRole('button', { name: 'Todo', exact: true })).toBeDisabled();
 });
+
+test('las transferencias no se pueden editar, solo eliminar', async ({ withSeed: app }) => {
+  await app.openTransfer();
+  await fillTransferForm(app.page, {
+    fromAccountName: 'Cuenta ARS',
+    toAccountName:   'Mercado Pago',
+    amount: '500',
+    note: 'Transfer no editable',
+  });
+  await submitTransferForm(app.page);
+
+  const legs = app.getTransactionItems().filter({ hasText: 'Transfer no editable' });
+  await expect(legs).toHaveCount(2, { timeout: 8_000 });
+
+  await legs.first().click();
+
+  const modal = app.page.locator('.fa-modal');
+  await expect(modal.getByRole('heading', { name: 'Transferencia' })).toBeVisible();
+  await expect(modal.getByText(/no se pueden editar/i)).toBeVisible();
+  // Sin formulario: no hay campo de monto ni botón Guardar
+  await expect(modal.locator('.fa-amount-input input')).toHaveCount(0);
+  await expect(modal.getByRole('button', { name: 'Guardar' })).toHaveCount(0);
+  await expect(modal.getByRole('button', { name: 'Eliminar' })).toBeVisible();
+
+  await modal.getByRole('button', { name: 'Cerrar', exact: true }).last().click();
+  await expect(modal).not.toBeVisible();
+  // Las dos patas siguen como transferencia
+  await expect(app.page.locator('.fa-tx-meta', { hasText: 'Transferencia' })).toHaveCount(2);
+});
